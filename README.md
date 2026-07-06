@@ -15,7 +15,9 @@ Instead of doomscrolling through stressful social media feeds, faithscrolling.co
 
 ## Why I'm releasing the code
 
-When I saw how smooth and fast the video playback worked I realized that an opportunity exists to break the connection between the physical act of scrolling and the toxic social media algorithms. This can be done by giving people the ability to create personalized short-video playlists, which they can then scroll through using browser-based video players. 
+When I saw how smooth and fast the video playback worked I realized that we have an opportunity to break the connection between the physical act of scrolling and the toxic social media algorithms. In other words, users can satisfy the habit without the harm.
+
+This can be done by giving people the ability to create personalized short-video playlists, which they can then scroll through using browser-based video players. 
 
 For example, a user could create a list of URLs of YouTube shorts. This list could be placed in a .txt file and uploaded to a shorts player. The videos can then be scrolled in the browser, without needing any expensive backend server infrastructure. This is how the Faith Scrolling video player works, except that the video URLs are hard coded.
 
