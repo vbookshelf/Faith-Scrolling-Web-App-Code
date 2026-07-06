@@ -1,5 +1,5 @@
 # Faith Scrolling Web App Code
-The open source code for the FaithScrolling.com TikTok style web app.
+The open source code for the FaithScrolling.com web app.
 
 Web App:<br>
 https://faithscrolling.com/shorts.html
