@@ -21,6 +21,26 @@ For example, a user could create a list of url's of YouTube shorts. This list co
 
 Developers can use this code as a basis to build browser based short-video players to cover multiple languages and user interests.
 
+## How to run the app
+
+The code needs to be on a server for the video features to work. You can upload the code to a shared web server, like Dreamhost, or use a local desktop server.
+
+This is how to use the python server on a Mac:
+
+- Open the Terminal.
+- Navigate to the folder containing index.html file.
+- Start the server by typing this in the terminal:<br>
+```
+  python3 -m http.server 8000
+```
+- Paste this into your web browser to launch the app:<br>
+```
+  http://localhost:8000/
+```
+- When you're done, go back to Terminal and press Ctrl+C to stop the server.
+
+<br>
+
 ## Known issues
 - When scrolling backwards, beyond video n-1, the audio is auto disabled to prevent lagging. When the user re-engages the audio, playback continues smoothly. However, playback still lags when the user tries to re-enable audio when on the n-2 video.
 
