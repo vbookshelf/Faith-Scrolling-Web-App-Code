@@ -17,9 +17,9 @@ Instead of doomscrolling through stressful social media feeds, faithscrolling.co
 
 When I saw how smooth and fast the video playback worked I realized that an opportunity exists to disconnect the physical act of scrolling from toxic AI social media algorithms by giving people the ability to create personalized short-video playlists, which they can then scroll through using browser-based video players. 
 
-For example, a user could create a list of url's of YouTube shorts. This list could be placed in a .txt file and uploaded to a shorts player. The videos can then be scrolled in the browser, without needing any expensive backend server infrastructure. This is how the Faith Scrolling video player works, except that the video url's are hard coded.
+For example, a user could create a list of URLs of YouTube shorts. This list could be placed in a .txt file and uploaded to a shorts player. The videos can then be scrolled in the browser, without needing any expensive backend server infrastructure. This is how the Faith Scrolling video player works, except that the video URLs are hard coded.
 
-Developers can use this code as a basis to build browser based short-video players to cover multiple languages and user interests.
+Developers can use this code as a basis to build browser-based short-video players to cover multiple languages and user interests.
 
 ## How to run the app
 
@@ -28,7 +28,7 @@ The code needs to be on a server for the video features to work. You can upload 
 This is how to use the python server on a Mac:
 
 - Open the Terminal.
-- Navigate to the folder containing index.html file.
+- Navigate to the folder containing the index.html file.
 - Start the server by typing this in the terminal:<br>
 ```
   python3 -m http.server 8000
@@ -42,7 +42,7 @@ This is how to use the python server on a Mac:
 <br>
 
 ## Known issues
-- When scrolling backwards, beyond video n-1, the audio is auto disabled to prevent lagging. When the user re-engages the audio, playback continues smoothly. However, playback still lags when the user tries to re-enable audio when on the n-2 video.
+- When scrolling backwards, beyond video n-1, the audio is automatically disabled to prevent lagging. When the user re-engages the audio, playback continues smoothly. However, playback still lags when the user tries to re-enable audio when on the n-2 video.
 
 <br>
 
