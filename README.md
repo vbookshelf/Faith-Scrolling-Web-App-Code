@@ -20,3 +20,16 @@ When I saw how smooth and fast the video playback worked I realized that an oppo
 For example, a user could create a list of url's of YouTube shorts. This list could be placed in a .txt file and uploaded to a shorts player. The videos can then be scrolled in the browser, without needing any expensive backend server infrastructure. This is how the Faith Scrolling video player works, except that the video url's are hard coded.
 
 Developers can use this code as a basis to build browser based short-video players to cover multiple languages and user interests.
+
+## Known issues
+- When scrolling backwards, beyond video n-1, the audio is auto disabled to prevent lagging. When the user re-engages the audio, playback continues smoothly. However, playback still lags when the user tries to re-enable audio when on the n-2 video.
+
+<br>
+
+## Revision History
+
+Version 1.0<br>
+6-July-2026<br>
+First release.
+
+<br>
