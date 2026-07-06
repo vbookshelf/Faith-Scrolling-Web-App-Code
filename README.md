@@ -11,7 +11,7 @@ https://faithscrolling.com/shorts.html
 
 ## What does the app do?
 
-Instead of doomscrolling through stressful social media feeds, faithscrolling.com offers a healthy spiritual alternative. It uses the same vertical swipe mechanics as TikTok to give the user encouraging text and video content. The same scrolling habit and muscle memory is used for something positive. There are no ads, no signup, no tracking, or other dark monetization tricks.
+Instead of doomscrolling through stressful social media feeds, faithscrolling.com offers a healthy spiritual alternative. It uses the same vertical swipe mechanics as TikTok to give the user encouraging text and video content. The same scrolling habit and muscle memory is used for something positive. There are no ads, no signup and no tracking or other dark monetization tricks.
 
 ## Why I'm releasing the code
 
