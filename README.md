@@ -6,7 +6,7 @@ https://faithscrolling.com/shorts.html
 
 <br>
 
-<img src="images/image1.png" alt="App screenshot" height="600">
+<img src="images/image1.png" alt="App screenshot" height="500">
 <p>Minimalist UI</p>
 
 ## What does the app do?
