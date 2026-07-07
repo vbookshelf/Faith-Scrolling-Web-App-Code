@@ -16,7 +16,7 @@ Instead of doomscrolling through stressful social media feeds, faithscrolling.co
 
 ## Why I'm releasing the code
 
-When I saw how smooth and fast the video playback worked I realized that there is an opportunity to disconnect the physical act of scrolling from the toxic social media algorithms. In other words, users can satisfy the habit without the harm.
+When I saw how smooth and fast the video playback worked I realized that there's an opportunity to disconnect the physical act of scrolling from the toxic social media algorithms. In other words, users can satisfy the habit without the harm.
 
 This can be done by transitioning to curated scroll content. One way could be to give people the ability to create personalized short-video playlists, which they can then scroll through using browser-based video players. 
 
