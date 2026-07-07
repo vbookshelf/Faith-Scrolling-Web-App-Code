@@ -20,7 +20,7 @@ When I saw how smooth and fast the video playback worked I realized that there's
 
 This can be done by transitioning to curated scroll content. One way could be to give people the ability to create personalized short-video playlists, which they can then scroll through using browser-based video players. 
 
-For example, a user could create a list of URLs of YouTube shorts. This list could be placed in a .txt file and uploaded to a shorts player. The videos can then be scrolled in the browser, without needing any expensive backend server infrastructure. This is how the Faith Scrolling video player works, except that the video URLs are hard coded.
+For example, a user could create a list of URLs of YouTube shorts. This list could be placed in a .txt file and uploaded to a shorts player. The videos can then be scrolled in the browser, without needing any backend server infrastructure. This is how the Faith Scrolling video player works, except that the video URLs are hard coded.
 
 ## How to run the app
 
