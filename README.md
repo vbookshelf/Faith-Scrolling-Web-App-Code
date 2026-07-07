@@ -1,5 +1,6 @@
 # Faith Scrolling Web App Code
-The open source code for the FaithScrolling.com web app.
+
+The open source code for the FaithScrolling.com web app. Developers can use this code as a basis to build personalized vertical-scroll experiences that support multiple spoken languages and user interests.
 
 Web App:<br>
 https://faithscrolling.com/shorts.html
@@ -20,8 +21,6 @@ When I saw how smooth and fast the video playback worked I realized that there i
 This can be done by transitioning to curated scroll content. One way could be to give people the ability to create personalized short-video playlists, which they can then scroll through using browser-based video players. 
 
 For example, a user could create a list of URLs of YouTube shorts. This list could be placed in a .txt file and uploaded to a shorts player. The videos can then be scrolled in the browser, without needing any expensive backend server infrastructure. This is how the Faith Scrolling video player works, except that the video URLs are hard coded.
-
-Developers can use this code as a basis to build personalized vertical-scroll experiences that support multiple spoken languages and user interests.
 
 ## How to run the app
 
