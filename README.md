@@ -44,7 +44,7 @@ This is how to use the python server on a Mac:
 
 ## Notes
 - When scrolling backwards, beyond video n-1, the audio is automatically disabled to prevent lagging. When the user re-engages the audio, playback continues smoothly. However, playback still lags when the user tries to re-enable audio when on the n-2 video. The other past videos (n-3, n-4, etc.) work without lagging.
-- The main weakness of this concept is that it relies on a third party platform (YouTube) where videos are created and hosted. The risk is that, at any time, the platform could change it's terms of service regarding embedding YouTube Shorts. That change could negatively impact all web apps that use iframes to display YouTube short videos.
+- The main weakness of this concept is that it relies on a third party platform (YouTube) where videos are created and hosted. The risk is that, at any time, the platform could change it's terms of service regarding embedding YouTube Shorts. That change could impact all web apps that use iframes to display YouTube short videos. Those changes could be neagative, but they could also be positive if, for example, YouTube gave video creators finer grained control over which web apps could embed their content.
 
 <br>
 
