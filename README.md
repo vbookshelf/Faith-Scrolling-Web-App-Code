@@ -1,6 +1,6 @@
 # Faith Scrolling Web App Code
 
-The open source code for the FaithScrolling.com web app. Developers can use this code as a basis to build personalized vertical-scroll experiences that support multiple spoken languages and user interests.
+The open source code for the FaithScrolling.com web app. Developers can use this framework to build personalized vertical-scroll experiences that support multiple spoken languages and user interests.
 
 Web App:<br>
 https://faithscrolling.com/shorts.html
