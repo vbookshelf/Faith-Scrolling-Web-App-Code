@@ -1,0 +1,1569 @@
+<!--
+# Faith Scrolling Web App Code
+# GitHub: https://github.com/vbookshelf/Faith-Scrolling-Web-App-Code
+# License: MIT (You are free to share this code with others.)
+# Version: 1.0
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Shorts</title>
+	<meta name="description" content="Scrollable music and teaching videos.">
+	
+	<link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- Self-hosted fonts (see fonts.css / fonts/) — no third-party
+         request to fonts.googleapis.com / fonts.gstatic.com needed.
+         Preloading the two fonts needed for first paint (body text +
+         the category pill label) so they're fetched immediately instead
+         of waiting for the CSS to be parsed. -->
+    <link rel="preload" as="font" type="font/woff2" href="fonts/lato-latin-400-normal.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="fonts/raleway-latin-700-normal.woff2" crossorigin>
+    <link rel="stylesheet" href="fonts.css">
+
+    <style>
+        :root {
+            --bg-paper: #f0f2f5;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --accent-gold: #c5a059;
+            --accent-dark: #8d7039;
+            --body-bg-start: #fbfbf8;
+            --body-bg-end: #e8e6e1;
+            --pill-bg: rgba(255, 255, 255, 0.9);
+            --overlay-bg: rgba(255, 255, 255, 0.95);
+            --mute-bg: rgba(255, 255, 255, 0.9);
+            --dark-toggle-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        :root.dark {
+            --bg-paper: #1a1a2e;
+            --text-primary: #e8e4d9;
+            --text-secondary: #9a9080;
+            --accent-gold: #d4af6a;
+            --accent-dark: #b8943e;
+            --body-bg-start: #12111a;
+            --body-bg-end: #1e1c28;
+            --pill-bg: rgba(30, 28, 40, 0.92);
+            --overlay-bg: rgba(18, 17, 26, 0.97);
+            --mute-bg: rgba(30, 28, 40, 0.92);
+            --dark-toggle-bg: rgba(30, 28, 40, 0.92);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Lato', sans-serif;
+            background-color: var(--body-bg-end);
+            background-image: radial-gradient(circle at center, var(--body-bg-start) 0%, var(--body-bg-end) 100%);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        /* --- The TikTok Scroll Container --- */
+        .feed-container {
+            height: 100vh;
+            width: 100vw;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .feed-container::-webkit-scrollbar { display: none; }
+
+        /* --- Individual Screen (Video) --- */
+        .video-screen {
+            height: 100vh;
+            width: 100vw;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .video-screen:focus-visible {
+            outline: 3px solid var(--accent-gold);
+            outline-offset: -3px;
+        }
+
+        .video-frame {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: calc(100vh * 9 / 16);
+            max-height: 100vh;
+            background: #000;
+            overflow: hidden;
+        }
+
+        @media (min-width: 601px) {
+            .video-frame {
+                border-radius: 18px;
+                max-height: 92vh;
+                max-width: calc(92vh * 9 / 16);
+            }
+        }
+
+        .player-mount { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .player-mount iframe { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 230px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--accent-gold);
+            opacity: 0.7;
+            animation: bounce 2s infinite;
+            font-family: 'Raleway', sans-serif;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+
+        /* --- Floating Header --- */
+        .floating-header {
+            position: fixed;
+            top: 20px;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        }
+        .category-pill {
+            pointer-events: auto;
+            background: var(--pill-bg);
+            backdrop-filter: blur(10px);
+            padding: 12px 25px;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            font-family: 'Raleway', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+        .category-pill:focus-visible,
+        .overlay-option:focus-visible,
+        .close-overlay:focus-visible,
+        .mute-button:focus-visible,
+        .dark-toggle:focus-visible {
+            outline: 3px solid var(--accent-gold);
+            outline-offset: 2px;
+        }
+
+        /* --- Dropdown Overlay --- */
+        .category-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: var(--overlay-bg);
+            /* Must exceed the utility buttons' z-index (300 — mute
+               button, dark-mode toggle, Bible-verses nav link) so this
+               modal is actually on top while open. It previously sat
+               at 200, meaning those three controls rendered visibly
+               above the "modal" backdrop and stayed clickable through
+               it — a real modal shouldn't leave anything behind it
+               interactive. */
+            z-index: 400;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .category-overlay.open { opacity: 1; visibility: visible; }
+
+        .overlay-subtitle {
+            font-family: 'Raleway', sans-serif;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 30px;
+            max-width: 320px;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .overlay-option {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.4rem;
+            margin: 12px 0;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        .overlay-option .option-sub {
+            display: block;
+            font-family: 'Raleway', sans-serif;
+            font-style: normal;
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+        .overlay-option:hover, .overlay-option.active { color: var(--accent-gold); font-style: italic; }
+
+        .close-overlay {
+            margin-top: 30px;
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            border: 1px solid var(--text-secondary);
+            background: transparent;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* --- Mute Button (now controls video sound) --- */
+        .mute-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 300;
+            width: 50px; height: 50px;
+            background-color: var(--mute-bg);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+            transition: background-color 0.4s ease;
+        }
+        .mute-button svg { width: 24px; height: 24px; fill: var(--text-secondary); }
+        #icon-unmuted { display: none; }
+
+        /* Attention cue for when we auto-mute on a big backward jump.
+           A brief scale pulse — enough to catch the eye without being
+           an annoying, indefinitely-looping animation. */
+        .mute-button.auto-muted-pulse {
+            animation: mute-pulse 0.6s ease-in-out 2;
+        }
+        @keyframes mute-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+            50% { transform: scale(1.18); box-shadow: 0 4px 20px rgba(197, 160, 89, 0.55); }
+        }
+
+        /* --- Dark Mode Toggle --- */
+        .dark-toggle {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 300;
+            width: 50px; height: 50px;
+            background-color: var(--dark-toggle-bg);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+            transition: background-color 0.4s ease;
+        }
+        .dark-toggle svg {
+            width: 22px; height: 22px;
+            color: var(--text-secondary);
+            transition: color 0.4s ease;
+        }
+        :root.dark .dark-toggle .icon-bulb path { stroke: var(--accent-gold); }
+
+        /* --- Cross-page nav link (bottom-left, mirrors the bottom-right
+           utility buttons). Unlike the theme toggle, this stays visible
+           on mobile — it's navigation, not a settings choice. --- */
+        .nav-link {
+            position: fixed;
+            bottom: 140px;
+            right: 20px;
+            z-index: 300;
+            width: 50px; height: 50px;
+            background-color: var(--dark-toggle-bg);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+            transition: background-color 0.4s ease, transform 0.2s ease;
+            text-decoration: none;
+        }
+        .nav-link:hover { transform: scale(1.05); }
+        .nav-link:focus-visible {
+            outline: 3px solid var(--accent-gold);
+            outline-offset: 2px;
+        }
+        .nav-link svg {
+            width: 26px; height: 26px;
+            color: var(--text-secondary);
+        }
+
+        /* Mobile is dark-mode-only — no theme choice, so the toggle
+           itself has nothing to do there and is hidden. */
+        @media (max-width: 600px) {
+            .dark-toggle { display: none; }
+            .nav-link { bottom: 80px; }
+        }
+
+        /* --- YouTube API load-failure fallback ---
+           Shown only if the iframe API script never calls back within
+           YT_API_TIMEOUT_MS (blocked domain, offline, ad blocker,
+           youtube.com outage). Without this, screens stay permanently
+           blank black rectangles with no explanation. */
+        .yt-load-error-banner {
+            position: fixed;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 150;
+            max-width: 320px;
+            width: calc(100% - 40px);
+            background: var(--overlay-bg);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            border-radius: 16px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            backdrop-filter: blur(10px);
+            text-align: center;
+            font-family: 'Raleway', sans-serif;
+            color: var(--text-primary);
+            display: none;
+        }
+        .yt-load-error-banner.visible { display: block; }
+        .yt-load-error-banner p {
+            margin: 0 0 12px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+        .yt-load-error-banner button {
+            font-family: 'Raleway', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--accent-dark);
+            background: transparent;
+            border: 1px solid var(--accent-gold);
+            border-radius: 20px;
+            padding: 8px 20px;
+            cursor: pointer;
+        }
+        .yt-load-error-banner button:focus-visible {
+            outline: 3px solid var(--accent-gold);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Floating Header -->
+    <header class="floating-header" role="banner">
+        <div class="category-pill" id="category-trigger" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Current source: Mixed. Change source.">
+            <span id="current-category-label">Mixed</span>
+            <span style="color: var(--accent-gold); font-size: 0.8em;" aria-hidden="true">▼</span>
+        </div>
+    </header>
+
+    <!-- Full Screen Scroll Container -->
+    <main class="feed-container" id="feed-container" role="main" aria-label="Shorts Feed">
+        <!-- Javascript will populate video screens here -->
+    </main>
+
+    <!-- Source Selection Overlay -->
+    <div class="category-overlay" id="category-overlay" role="dialog" aria-modal="true" aria-label="Select">
+        <div role="menu" aria-label="Source Options" id="menu-options-container">
+            <!-- Populated by JS from the MINISTRIES data object, so
+                 adding a ministry there is the only edit required. -->
+        </div>
+
+        <button class="close-overlay" aria-label="Close Menu">✕</button>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <button class="dark-toggle" id="dark-toggle" aria-label="Switch to dark mode">
+        <svg class="icon-bulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 21h6M10 17.5h4M12 3a7 7 0 0 1 4 12.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-1.26A7 7 0 0 1 12 3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+
+    <!-- Cross-page link: back to the Scriptures feed -->
+    <a class="nav-link" href="index.html" aria-label="Read Bible verses">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 6c-1.6-1.1-4-1.6-6-1.2v13c2 0 4.4 0.4 6 1.5m0-13.3c1.6-1.1 4-1.6 6-1.2v13c-2 0-4.4 0.4-6 1.5M12 6v13.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </a>
+
+    <!-- Mute Button (controls the active video's sound) -->
+    <div class="mute-button" id="mute-button" role="button" tabindex="0" aria-label="Unmute video">
+        <svg id="icon-muted" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+        <svg id="icon-unmuted" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    </div>
+
+    <!-- YouTube API load-failure fallback (hidden unless the API
+         never becomes ready within YT_API_TIMEOUT_MS) -->
+    <div class="yt-load-error-banner" id="yt-load-error-banner" role="alert">
+        <p>Videos are not loading. Please check your connection.</p>
+        <button type="button" id="yt-load-error-retry">Retry</button>
+    </div>
+
+    <script>
+        // ============================================================
+        // DATA: hand-picked real Shorts for the prototype, organized
+        // per ministry — same shape as the original `scriptures` object
+        // keyed by topic, just keyed by ministry instead.
+        //
+        // In production each ministry's list would be maintained as a
+        // curated playlist (a human picks/approves what goes in) rather
+        // than an unfiltered live pull from the channel's uploads. That
+        // preserves quality control and gives you a natural point of
+        // contact if a ministry ever wants to be added, updated, or
+        // removed.
+        // ============================================================
+        const MINISTRIES = {
+			
+			bethelMusic: {
+                label: 'Bethel Music',
+                channel: 'Bethel Music',
+				
+				// rate is optional; e.g. 1.25 plays 25% faster
+                videos: [
+                    { id: '5J6W7DgxXAE', title: 'Music', rate: 1 }, // https://youtube.com/shorts/5J6W7DgxXAE?si=PRHk9mjxvvHnhqRv
+                    { id: 'jFEWOaIaXeo', title: 'Music', rate: 1 }, // https://youtube.com/shorts/jFEWOaIaXeo?si=ktlwuKupfvYe4LKM
+                    { id: '_A2T-8QDfbo', title: 'Music', rate: 1 }, // https://youtube.com/shorts/_A2T-8QDfbo?si=0V-WIB_Ck-wlBzOi
+                    { id: 'fiQBUdXcdMc', title: 'Music', rate: 1 }, // https://youtube.com/shorts/fiQBUdXcdMc?si=0-kNMuBBGTrSrJBq
+					{ id: 'jgpQleHxCmg', title: 'Music', rate: 1 }, // https://youtube.com/shorts/jgpQleHxCmg?si=4hjT2BxLVedB_xfx
+					{ id: 'JnqHiCZRXJ8', title: 'Music', rate: 1 }, // https://youtube.com/shorts/JnqHiCZRXJ8?si=OFgQ-bW-UcDNtLft
+					{ id: 'rr0xGdawp9g', title: 'Music', rate: 1 }, // https://youtube.com/shorts/rr0xGdawp9g?si=I_ZY_j2RBbxSKpYq
+					{ id: '5FAhR-EhSx4', title: 'Music', rate: 1 }, // https://youtube.com/shorts/5FAhR-EhSx4?si=2sgMcTmziXegNDDt
+					{ id: 'jOScMPSZ0ts', title: 'Music', rate: 1 }, // https://youtube.com/shorts/jOScMPSZ0ts?si=7S9cdDpKDU3u6HdG
+					{ id: 'XGavlzpLZDI', title: 'Music', rate: 1 }, // https://youtube.com/shorts/XGavlzpLZDI?si=sqfrIhxPUzOVfrG2
+					
+					{ id: 'afEtIEvPAJs', title: 'Music', rate: 1 }, // https://youtube.com/shorts/afEtIEvPAJs?si=qnQ7rwFgHCzKZJ8k
+					{ id: '25_DiM86ZRU', title: 'Music', rate: 1 }, // https://youtube.com/shorts/25_DiM86ZRU?si=6oBQP76mjRxcO5dd
+					{ id: 'dEt1TN1sNZA', title: 'Music', rate: 1 }, // https://youtube.com/shorts/dEt1TN1sNZA?si=h2E19k6w2Vlfhqma
+					{ id: 'VSUJ1thx6uo', title: 'Music', rate: 1 }, // https://youtube.com/shorts/VSUJ1thx6uo?si=yvtVSq6rGem9QjFe
+					{ id: 'sQx7vaL6yfY', title: 'Music', rate: 1 }, // https://youtube.com/shorts/sQx7vaL6yfY?si=33ur_5XicmVlP8gp
+					{ id: '-hZExFHtAtg', title: 'Music', rate: 1 }, // https://youtube.com/shorts/-hZExFHtAtg?si=eRY0xW9AnAAhdtWA
+					{ id: 'Aio18yZXpBc', title: 'Word', rate: 1 }, // https://youtube.com/shorts/Aio18yZXpBc?si=h2PAj95X3c8QH2_F
+					{ id: 'EiSmDwXmE5o', title: 'Music', rate: 1 }, // https://youtube.com/shorts/EiSmDwXmE5o?si=621NLEToKyc2aoE9
+					{ id: 'w2060cuInaM', title: 'Music', rate: 1 }, // https://youtube.com/shorts/w2060cuInaM?si=G2Rwq2OT37jAKKy6
+					{ id: 'ZH_iKIbEHSg', title: 'Music', rate: 1 }, // https://youtube.com/shorts/ZH_iKIbEHSg?si=feKrm_JoavvxEME7
+					{ id: 'Dyeh2KIQWCM', title: 'Music', rate: 1 }, // https://youtube.com/shorts/Dyeh2KIQWCM?si=ZzGu_cpPewimJAj4
+					
+					{ id: 'JAREcpJRgz4', title: 'Music', rate: 1 }, // https://youtube.com/shorts/JAREcpJRgz4?si=ve2ihhLIffyxkqk_
+
+					
+					{ id: 'P8vxwaLG0HY', title: 'Music', rate: 1 }, // https://youtube.com/shorts/P8vxwaLG0HY?si=ABzmzFSPc_53NDlI
+					{ id: 'HYNFFo20PsA', title: 'Music', rate: 1 }, // https://youtube.com/shorts/HYNFFo20PsA?si=15uvSMXLA-ezi98M
+					{ id: '5KvwXQqfAvs', title: 'Music', rate: 1 }, // https://youtube.com/shorts/5KvwXQqfAvs?si=r7b69mL1A_w6hc-6
+					
+					{ id: '880KkLcGxlg', title: 'Music', rate: 1 }, // https://youtube.com/shorts/880KkLcGxlg?si=Umb76SwdLnVQ29Yw
+					{ id: 'F066PDBNMSs', title: 'Music', rate: 1 }, // https://youtube.com/shorts/F066PDBNMSs?si=L6mebjhwXmmW1t0u
+					{ id: 'VkpIXNOXEqQ', title: 'Music', rate: 1 }, // https://youtube.com/shorts/VkpIXNOXEqQ?si=wdlPWvrSbnfguNGj
+					{ id: 'SInCGf86BUA', title: 'Music', rate: 1 }, // https://youtube.com/shorts/SInCGf86BUA?si=QoLicoJi6LBZAI6g
+					{ id: '04pHOyDFw4A', title: 'Music', rate: 1 }, // https://youtube.com/shorts/04pHOyDFw4A?si=tolDCZomS7vbjJuE
+					{ id: 'z3YgP4Uehis', title: 'Music', rate: 1 }, // https://youtube.com/shorts/z3YgP4Uehis?si=iH_LBsChCjF_A4bX
+					{ id: 'Os3k-rWy6eA', title: 'Music', rate: 1 }, // https://youtube.com/shorts/Os3k-rWy6eA?si=evPAjKNBr8HfgfGn
+					{ id: 'MW1ODyRA210', title: 'Music', rate: 1 }, // https://youtube.com/shorts/MW1ODyRA210?si=tWf3q8BEMp3g9T-m
+					
+					{ id: 'tuGGDTpbULU', title: 'Music', rate: 1 }, // https://youtube.com/shorts/tuGGDTpbULU?si=0O6YY4zA275UNGPg
+					{ id: 'RKaV6QxIEew', title: 'Music', rate: 1 }, // https://youtube.com/shorts/RKaV6QxIEew?si=wx4b27I7ZfTHnwtu
+					{ id: 'WtIUucEjP0A', title: 'Music', rate: 1 }, // https://youtube.com/shorts/WtIUucEjP0A?si=jvM0ig5jrpeT9bC3
+					{ id: 'COFlm5qnKvY', title: 'Music', rate: 1 }, // https://youtube.com/shorts/COFlm5qnKvY?si=cnSFVQBSww4tP0o5
+					{ id: 'mH-t2B_oVGY', title: 'Music', rate: 1 }, // https://youtube.com/shorts/mH-t2B_oVGY?si=JMul8uBoaawPWiI7
+
+					{ id: 'MYGLqeokGF0', title: 'Music', rate: 1 }, // https://youtube.com/shorts/MYGLqeokGF0?si=pwBf-JNJwO7fsF0Q
+					{ id: 'kF5yAlOolM8', title: 'Music', rate: 1 }, // https://youtube.com/shorts/kF5yAlOolM8?si=0pWJQ5iLBcWfU82d
+                ]
+            },
+			
+			
+			hillsongWorship: {
+                label: 'Hillsong Church',
+                channel: 'Hillsong',
+				
+				// rate is optional; e.g. 1.25 plays 25% faster
+                videos: [
+					{ id: 'SZAXz5BkD8M', title: 'Word', rate: 1 }, // https://youtube.com/shorts/SZAXz5BkD8M?si=Qsem-T_SvoBVeKoj
+                    { id: 'EwTVSv5wUt4', title: 'Music', rate: 1 }, // https://youtube.com/shorts/EwTVSv5wUt4?si=mNtZiK4foJn277Ap
+                    { id: '52VAb118ZxE', title: 'Music', rate: 1 }, // https://youtube.com/shorts/52VAb118ZxE?si=W5xYgTD5367Ks2I1
+                    { id: 'v6qEgAameQA', title: 'Music', rate: 1 }, // https://youtube.com/shorts/v6qEgAameQA?si=PXRRLnUG5_CnV3sX
+                    { id: 'Ku4HCAzlWrs', title: 'Music', rate: 1 }, // https://youtube.com/shorts/Ku4HCAzlWrs?si=hVTPpBkY7qi_Ng3A
+					{ id: 'Ozu6hZVHzRo', title: 'Music', rate: 1 }, // https://youtube.com/shorts/Ozu6hZVHzRo?si=0YJWAJZnQj38TC5P
+					{ id: 'fLknmRJ1xa0', title: 'Music', rate: 1 }, // https://youtube.com/shorts/fLknmRJ1xa0?si=kvD5_zyv4LgHFpOt
+					{ id: 'BR5TXmPQEmc', title: 'Word', rate: 1 }, // https://youtube.com/shorts/BR5TXmPQEmc?si=nX9mAEXPNm0KogMH
+					
+					{ id: 'PNYDHeVP74U', title: 'Music', rate: 1 }, // https://youtube.com/shorts/PNYDHeVP74U?si=4oUG0gE93ns4zBWA
+					{ id: 'WdGcCFpFpgA', title: 'Music', rate: 1 }, // https://youtube.com/shorts/WdGcCFpFpgA?si=KWrK3p5FgYg6e9w7
+					
+					{ id: 'rvDa4BvCpuo', title: 'Music', rate: 1 }, // https://youtube.com/shorts/rvDa4BvCpuo?si=vmSRMB3TaziphD9p
+					{ id: 'mvnEFG4XB6c', title: 'Music', rate: 1 }, // https://youtube.com/shorts/mvnEFG4XB6c?si=wgDtUfdZNWYI9e6Y
+					{ id: 'J41pFGiXF5o', title: 'Music', rate: 1 }, // https://youtube.com/shorts/J41pFGiXF5o?si=lRQZhCfZPfWra9v0
+					{ id: 'I_Ynu0h5mj8', title: 'Music', rate: 1 }, // https://youtube.com/shorts/I_Ynu0h5mj8?si=73WAAZqLlStrykeQ
+					{ id: 'eNa-b7TzGS4', title: 'Music', rate: 1 }, // https://youtube.com/shorts/eNa-b7TzGS4?si=hdPpnj-3K5nct4-o
+					{ id: 'UU6BXlA0Ys4', title: 'Music', rate: 1 }, // https://youtube.com/shorts/UU6BXlA0Ys4?si=tNH8vFoK_jIGOdo9
+					{ id: '5qH5Y1alLgo', title: 'Music', rate: 1 }, // https://youtube.com/shorts/5qH5Y1alLgo?si=7JfgkG1Mh-zYg_o5
+					{ id: '4CCJMQLjWWg', title: 'Word', rate: 1 }, // https://youtube.com/shorts/4CCJMQLjWWg?si=jg7xM3OKnuzpAvRt
+					{ id: 'eD4ozV9TSAw', title: 'Word', rate: 1 }, // https://youtube.com/shorts/eD4ozV9TSAw?si=DuTUsr_vEnUCi7of
+					{ id: 'ecW5ilpiB8o', title: 'Word', rate: 1 }, // https://youtube.com/shorts/ecW5ilpiB8o?si=dtLvX9HLobTDQP5R
+					
+					{ id: 'cWMNWBAC3PY', title: 'Word', rate: 1 }, // https://youtube.com/shorts/cWMNWBAC3PY?si=aJPZaVbO30l048UU
+	
+					
+				
+                ]
+            },
+			
+			
+			elevationWorship: {
+                label: 'Elevation Worship',
+                channel: 'Elevation Worship',
+				
+				// rate is optional; e.g. 1.25 plays 25% faster
+                videos: [
+				{ id: 'DLLHGf9aK_c', title: 'Music', rate: 1 }, // https://youtube.com/shorts/DLLHGf9aK_c?si=3nD3GdgRl7DD0Q7j
+                    { id: 'IAwZQoi_r9Y', title: 'Music', rate: 1 }, // https://youtube.com/shorts/IAwZQoi_r9Y?si=zjgbLlwLR5khMxEK
+                    { id: 'bwkapD42BZs', title: 'Music', rate: 1 }, // https://youtube.com/shorts/bwkapD42BZs?si=Flx6eW9XMJTCcyQH
+                    { id: 'tbyo1moyVqc', title: 'Music', rate: 1 }, // https://youtube.com/shorts/tbyo1moyVqc?si=p_Xrn01BQ-NTf8Xi
+					{ id: '_YLkHewM6dc', title: 'Music', rate: 1 }, // https://youtube.com/shorts/_YLkHewM6dc?si=bRvsIh3gYsOqyvMg
+					{ id: 'Bx226b284to', title: 'Music', rate: 1 }, // https://youtube.com/shorts/Bx226b284to?si=8zjXDPLSWPMjUXYr
+					{ id: '15EZ97RXsu0', title: 'Word', rate: 1 }, // https://youtube.com/shorts/15EZ97RXsu0?si=xJ-VoHCQtljsERaX
+					{ id: '52A2qSGFWoM', title: 'Music', rate: 1 }, // https://youtube.com/shorts/52A2qSGFWoM?si=GirnIW-lTSTMJkV7
+					{ id: '4BBnffbRFus', title: 'Music', rate: 1 }, // https://youtube.com/shorts/4BBnffbRFus?si=1OL79-hmUfOk_4dh
+					{ id: 'gH4kTrRTIfE', title: 'Music', rate: 1 }, // https://youtube.com/shorts/gH4kTrRTIfE?si=dEI803SlYlnmd-EQ
+					
+					{ id: 'VrOGYmRc0_o', title: 'Music', rate: 1 }, // https://youtube.com/shorts/VrOGYmRc0_o?si=n1w7ipS4jTh9eVIY
+					{ id: 'jHltpZ3g31E', title: 'Music', rate: 1 }, // https://youtube.com/shorts/jHltpZ3g31E?si=LATG2gZzdU64BtkH
+					{ id: 'C8gs67VmHc8', title: 'Music', rate: 1 }, // https://youtube.com/shorts/C8gs67VmHc8?si=CTNrYgiMmjujsB4L
+					{ id: 'aUnpAtyd4TE', title: 'Music', rate: 1 }, // https://youtube.com/shorts/aUnpAtyd4TE?si=Va8H6rEx09A94f9I
+					{ id: 'rtuIaFMbmUk', title: 'Music', rate: 1 }, // https://youtube.com/shorts/rtuIaFMbmUk?si=dww7KrypekyQUAek
+					{ id: 'zjb8TT9M_30', title: 'Music', rate: 1 }, // https://youtube.com/shorts/zjb8TT9M_30?si=70awXBGk7pSitQtD
+					{ id: 'jO5eKdArBQo', title: 'Music', rate: 1 }, // https://youtube.com/shorts/jO5eKdArBQo?si=4_4zAWLmQEeT7axd
+					{ id: 'yHcqo2gYmZM', title: 'Music', rate: 1 }, // https://youtube.com/shorts/yHcqo2gYmZM?si=QjlRbsymRPQyZ1zj
+					{ id: 'HekzWUpobUs', title: 'Music', rate: 1 }, // https://youtube.com/shorts/HekzWUpobUs?si=MrhAaGbgBy5y64zr
+					{ id: 'MaBvKeVPSoM', title: 'Music', rate: 1 }, // https://youtube.com/shorts/MaBvKeVPSoM?si=sfw1Jnzh7usxKluf
+					
+					{ id: 'OJ31_rWFBsA', title: 'Music', rate: 1 }, // https://youtube.com/shorts/OJ31_rWFBsA?si=QXaW2h13eAu6FXr8
+					{ id: 'TvRhGXLHEn0', title: 'Music', rate: 1 }, // https://youtube.com/shorts/TvRhGXLHEn0?si=qJFVfcm8-BnOO4i8
+					{ id: 'utRgwSajLpY', title: 'Music', rate: 1 }, // https://youtube.com/shorts/utRgwSajLpY?si=V0N6Cjk71HiHIdXX
+				    { id: 'asYr0X3QqxE', title: 'Word', rate: 1 }, // https://youtube.com/shorts/asYr0X3QqxE?si=u2-79em2VroDxBkS
+					{ id: 'MZVuXrUhZs4', title: 'Music', rate: 1 }, // https://youtube.com/shorts/MZVuXrUhZs4?si=cD4K2Yt2Cjt63Ns7
+					{ id: '2erpj635b04', title: 'Music', rate: 1 }, // https://youtube.com/shorts/2erpj635b04?si=qOwe-ADxzgTNa9tt
+					{ id: 'iTsL7zlLHBQ', title: 'Music', rate: 1 }, // https://youtube.com/shorts/iTsL7zlLHBQ?si=zhCAc_Gu7-IXHUJU
+					{ id: 'KPJeAW9k77I', title: 'Music', rate: 1 }, // https://youtube.com/shorts/KPJeAW9k77I?si=piPp_HN3YpC2XoUX
+					{ id: 'XfWbHOOm2-s', title: 'Music', rate: 1 }, // https://youtube.com/shorts/XfWbHOOm2-s?si=rtYt6xah6PIDUZh_
+					{ id: '-JipbEA2YkE', title: 'Music', rate: 1 }, // https://youtube.com/shorts/-JipbEA2YkE?si=_V0mcUDPO3fY2_d0
+					
+					{ id: 'Zbutc42yzoc', title: 'Music', rate: 1 }, // https://youtube.com/shorts/Zbutc42yzoc?si=SWxhAG0h9DSeRQDV
+					{ id: 'jWvGLCxiv9A', title: 'Music', rate: 1 }, // https://youtube.com/shorts/jWvGLCxiv9A?si=8E0Feic5gS10Eahz
+					{ id: 's4CFnZ1OC18', title: 'Music', rate: 1 }, // https://youtube.com/shorts/s4CFnZ1OC18?si=S_3HtK3SPAUv9VO6
+					{ id: 'jtx13lZWuvE', title: 'Music', rate: 1 }, // https://youtube.com/shorts/jtx13lZWuvE?si=meHMamQLPfMIWQim
+					
+					{ id: 'jSwkpY_Gdas', title: 'Music', rate: 1 }, // https://youtube.com/shorts/jSwkpY_Gdas?si=NV8u7M-xLJw4QCHe
+					{ id: 'VgW1t1Vt3Sk', title: 'Music', rate: 1 }, // https://youtube.com/shorts/VgW1t1Vt3Sk?si=s6KEjAlQdwtLj8bR
+					{ id: 'Ht1a4v8now8', title: 'Music', rate: 1 }, // https://youtube.com/shorts/Ht1a4v8now8?si=0NgOkLyP92ATyRJM
+					{ id: 'itqMZEgopLo', title: 'Music', rate: 1 }, // https://youtube.com/shorts/itqMZEgopLo?si=D5LQdaxXxbJ6b9mM
+					{ id: 'KFX4Jg11JZ8', title: 'Music', rate: 1 }, // https://youtube.com/shorts/KFX4Jg11JZ8?si=BRAhPPhaxK5YNewh
+					{ id: '1zEVh7XdBpk', title: 'Music', rate: 1 }, // https://youtube.com/shorts/1zEVh7XdBpk?si=96i33adaVHxKVRnn
+					{ id: 'eKG_nbKM_B4', title: 'Music', rate: 1 }, // https://youtube.com/shorts/eKG_nbKM_B4?si=L3pHvm_UhPdbUc9e
+					{ id: 'ZBifYsL_4-k', title: 'Music', rate: 1 }, // https://youtube.com/shorts/ZBifYsL_4-k?si=HsGorG-Ij16hPWlJ
+					{ id: 'a7g4XTyvJrE', title: 'Music', rate: 1 }, // https://youtube.com/shorts/a7g4XTyvJrE?si=BjfBcWbkMRiqRymu
+					{ id: 'Fmb6BNOCLTc', title: 'Music', rate: 1 }, // https://youtube.com/shorts/Fmb6BNOCLTc?si=yOI9-79vPmJCwEFH
+					
+					{ id: 'TsmIxZDB078', title: 'Music', rate: 1 }, // https://youtube.com/shorts/TsmIxZDB078?si=oB3hNqLV38SnkVwp
+					{ id: 'CvFmXVyEqHA', title: 'Music', rate: 1 }, // https://youtube.com/shorts/CvFmXVyEqHA?si=wlgUTWISsGxrrIx7
+					{ id: 'LSegaVazOUc', title: 'Music', rate: 1 }, // https://youtube.com/shorts/LSegaVazOUc?si=kAEsDEMsxI0XsthT
+					{ id: 'zGiM6xF745Y', title: 'Music', rate: 1 }, // https://youtube.com/shorts/zGiM6xF745Y?si=GmfLkw__NpGoa3uE
+					
+					{ id: '5C5_RWGX3xo', title: 'Music', rate: 1 }, // https://youtube.com/shorts/5C5_RWGX3xo?si=bQ4hOTp5Kxj0oUMT
+					{ id: 'h63zVCfNg7Q', title: 'Music', rate: 1 }, // https://youtube.com/shorts/h63zVCfNg7Q?si=sbXQ0vBw9avxeX-C
+					
+					{ id: 'pAePLFOC6sQ', title: 'Music', rate: 1 }, // https://youtube.com/shorts/pAePLFOC6sQ?si=O7pl0JWZmjUdhwi- // David
+					{ id: 'Fqg0BlgLLys', title: 'Music', rate: 1 }, // https://youtube.com/shorts/Fqg0BlgLLys?si=JfO5XYRcSs6MGHj4
+                ]
+            },
+			
+			
+            josephPrince: {
+                label: 'Joseph Prince',
+                channel: 'Joseph Prince Ministries',
+				
+				// rate is optional; e.g. 1.25 plays 25% faster
+                videos: [
+                    { id: '8ly2QAsiUik', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/8ly2QAsiUik?si=t9bt15BLbixK0UpC
+                    { id: 'mMo-OgebZ80', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/mMo-OgebZ80?si=PyVDUtcYtzkI0s_J
+                    { id: 'VsRdID1f5AA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/VsRdID1f5AA?si=V9rpz7jcRZlNmh_y
+                    { id: '2uUPCOjJ-cs', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/2uUPCOjJ-cs?si=lr4V9D6xcTNhz-rk
+					{ id: 'PL4bhSMzbgw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/PL4bhSMzbgw?si=0lTBtGiwYYSYcmgo
+					{ id: '_CT7WFC3YCg', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/_CT7WFC3YCg?si=UZqJo3EoVDse9sIa
+					{ id: 'Qen6Wqxsvb0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/Qen6Wqxsvb0?si=aXmEfAceyvnIvfeO
+					{ id: '9liR4PoG8EY', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/9liR4PoG8EY?si=PmU-7KbuedmE-IhU
+					{ id: 'tOVlSkNweMk', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/tOVlSkNweMk?si=Y-I3RvdR7z9_QNy7
+					{ id: '2c8aoxRqJS0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/2c8aoxRqJS0?si=WqWpHdpuCfsysy8d
+					
+					{ id: 'sA9YonvXgR0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/sA9YonvXgR0?si=NYvgoxN4WDItboA7
+					{ id: 'HkpaWZ8fYI0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/HkpaWZ8fYI0?si=28b_K6eoEUY6wsXz
+					{ id: 'IzaiD5r0mSA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/IzaiD5r0mSA?si=hAPJf9jLefPt99JZ
+					{ id: 'QsOQYgepkLQ', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/QsOQYgepkLQ?si=LUZ-A6R8NGxSl3FU
+					{ id: '8_5K29FbxEc', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/8_5K29FbxEc?si=K7rPYpUtAODupxyS
+					{ id: 'zexdJP36YWA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/zexdJP36YWA?si=D3XdkOxVgR7f1VyK
+					{ id: 'f5z3kh4fJ_4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/f5z3kh4fJ_4?si=KOABV4rxET801r4r
+					{ id: 'BNiobPsDv5M', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/BNiobPsDv5M?si=fBm8v2prg1K8kCkX
+					{ id: '5WcBjF32rT8', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/5WcBjF32rT8?si=HGFokOnSOzA1PyCk
+					{ id: 'R1Kzxuul4o4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/R1Kzxuul4o4?si=yEv5khBK9GpcH5ub
+					
+					{ id: 'jCfYzVN5cls', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/jCfYzVN5cls?si=jxORhuc_49fx8oBE
+					{ id: 'eeYQgZoJbZw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/eeYQgZoJbZw?si=LT_z_Cb6DDV9IHT3
+					{ id: 'JgyBa9-LJD4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/JgyBa9-LJD4?si=-X86dbkNUzdwKEMU
+					{ id: 'pZuK42pb68Q', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/pZuK42pb68Q?si=axxvEQKjh8fbZ4hM
+					{ id: 'hjJWVBY6ttA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/hjJWVBY6ttA?si=k6Pqjr9ypQFoHQLe
+					{ id: '6-HOmvtttP4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/6-HOmvtttP4?si=NHFeQ3qv7bJznLgk
+					{ id: 'eTzY2Mb9Zc4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/eTzY2Mb9Zc4?si=ojfVHdAIv2AbsjGD
+					{ id: 'Csdy6aWU6f8', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/Csdy6aWU6f8?si=3qYBM6XCxVUybbjF
+					{ id: 'eZuX3VVFQiA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/eZuX3VVFQiA?si=mf1RUtmM5wBNYIhU
+					{ id: 'qQoeB-G5mbU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/qQoeB-G5mbU?si=jiyYRTqKDI0k4E31
+					
+					{ id: '9AVcPv46r5M', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/9AVcPv46r5M?si=KIjNkaaBUWZKdFR4
+					{ id: 'R-uCOTm0sqE', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/R-uCOTm0sqE?si=m2lxdUF9mITpOzCq
+					{ id: 'BABfKWFjuXw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/BABfKWFjuXw?si=iRt4iK6vZPsHboWD
+					{ id: 'a2Y0yndkrqM', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/a2Y0yndkrqM?si=teczCuPYR7AB011a
+					{ id: '3gcGYKgfgjo', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/3gcGYKgfgjo?si=ged1_MS5k_16BkQF
+					{ id: '98bf47eRP7c', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/98bf47eRP7c?si=lx4GOvqQf3dGM_0g
+					{ id: 'el6D7xbYv8U', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/el6D7xbYv8U?si=NOktrgSUn9zf7GMU
+					{ id: 'skXMNBY1K74', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/skXMNBY1K74?si=l9y50C55xKhG3jR1
+					{ id: 'sxM_2lM0GoM', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/sxM_2lM0GoM?si=CDsWE5n9389ORWjO
+					
+					{ id: 'jeOUvLLScgk', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/jeOUvLLScgk?si=M833P8F1hXA-tJNQ
+					{ id: 'ZfmUpEV9VCg', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/ZfmUpEV9VCg?si=6XKscFTNpnoNfGS4
+					{ id: 'rP0-zYZkkLE', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/rP0-zYZkkLE?si=LXvIQIjsAsz9d1N0
+					{ id: 'I_gawUraNYI', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/I_gawUraNYI?si=jRf0yBpxc3xROncQ
+					{ id: 'UOeOHqOku1U', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/UOeOHqOku1U?si=FHKVLLGA1ZRdDQF8
+					{ id: 'VY3Jvm3507w', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/VY3Jvm3507w?si=TYEA50blbdsqcN_9
+					{ id: 'WKhuDPFv460', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/WKhuDPFv460?si=rbAM6SkhmfdOchBG
+					{ id: 'tU-a2ZYAyMA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/tU-a2ZYAyMA?si=M0yj2iN5_AQGhvLW
+					{ id: '9ik1L_2rqe0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/9ik1L_2rqe0?si=u81ffxSAqfxmRLjb
+					{ id: 'Hi4uN_fJk5U', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/Hi4uN_fJk5U?si=_4PE4qgnOBFihAR5
+					
+					{ id: 'jpSs3KE2TgU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/jpSs3KE2TgU?si=HP_eUwy3yyxk0o2M
+					{ id: 'opt-AZVyJ_4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/opt-AZVyJ_4?si=IMEGtZ77POKTWNu3
+					{ id: 'kJc2GqtrcGU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/kJc2GqtrcGU?si=hZd5pYCy6qoGUYnJ
+					{ id: 'OXMGKTRK-Hw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/OXMGKTRK-Hw?si=PQY5A5wwojJG8BXD
+					{ id: 'NBWzySe-eVw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/NBWzySe-eVw?si=3N6HN-4jiN0xVp7v
+					{ id: 'xRHs_j49wQ8', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/xRHs_j49wQ8?si=eMMQvCV04BqnU4zL
+					{ id: '1LC03rmUQTs', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/1LC03rmUQTs?si=i5fr1heXl2XN0UuS
+					{ id: '31LsivCyZTc', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/31LsivCyZTc?si=H-ewecNPLKh7_ATE
+					{ id: 'al6_JnesKqU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/al6_JnesKqU?si=JtxlgNBV1-W11uR9
+					{ id: 'C6RhjL0b_2M', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/C6RhjL0b_2M?si=HDTVZm0GuLse2xDy
+					
+					{ id: 'vZemFhgvqNI', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/vZemFhgvqNI?si=IsiJP34-gmsAiSMF
+					{ id: '8Adcxs0A1eA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/8Adcxs0A1eA?si=qt-LgFojKOSn1MWa
+					{ id: 'PLfgOft0MOw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/PLfgOft0MOw?si=SxuJz-iJR1zHI3En
+					{ id: '6bngSBS5RUo', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/6bngSBS5RUo?si=4DtSO0QGZzs7kGb5
+					{ id: '2dPVfUre14Y', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/2dPVfUre14Y?si=j06dq2KC34qfOCJY
+					{ id: 'wC22vfe65WY', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/wC22vfe65WY?si=KqkKprV54D-JvQ5z
+					{ id: 'aO41Ld_ewt4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/aO41Ld_ewt4?si=M4fb9WoFDxA3chx-
+					{ id: '_auBBWlZ6PI', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/_auBBWlZ6PI?si=b4gHdjU3h8GkdiQD
+					{ id: 'v5PoqgGJTus', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/v5PoqgGJTus?si=sZCPvV21lxvlyhRE
+					{ id: 'xMWu8SQTey0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/xMWu8SQTey0?si=oTe1NEan9dGaOLhA
+					
+					{ id: 'TRWeyMil-6Q', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/TRWeyMil-6Q?si=AyEVn3naCXH_P2mh
+					{ id: 'GeUxMUqKqEg', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/GeUxMUqKqEg?si=UHt4CHkAhkj7VegK
+					{ id: 'jT0uLo3vDdU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/jT0uLo3vDdU?si=VNU-pvq52MlFLyq2
+					{ id: 'ZV55t_muk5I', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/ZV55t_muk5I?si=qFpFxUn__Lf92mOL
+					{ id: 'zNuM1lz861w', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/zNuM1lz861w?si=_XpMNNfNPnwpv-9A
+					{ id: 'RyDKKrwWTHY', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/RyDKKrwWTHY?si=7llrEP69FbiZowTA
+					{ id: 'm8WnYsdBUMc', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/m8WnYsdBUMc?si=XbD74JpIlHefFP3b
+
+					{ id: 'EmtsKhf1TGE', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/EmtsKhf1TGE?si=WisTpIf7abBmHlMz
+					{ id: 'xY9CM3xd9EE', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/xY9CM3xd9EE?si=FxTckYAskkRlvve1
+					{ id: 'qNdFZ4YB0GY', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/qNdFZ4YB0GY?si=7tbx6avbaKzgD__W
+					
+					{ id: 'dadSbp8FDQI', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/dadSbp8FDQI?si=ztzSFof97oFyOxel
+					{ id: 'VrUcMCft45M', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/VrUcMCft45M?si=HyYxGVCpOrKz9JIC
+					{ id: 'nWkqvVBRHmc', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/nWkqvVBRHmc?si=rx7L0n3YusT5mLEa
+					{ id: 'D-lPSFwq1Ks', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/D-lPSFwq1Ks?si=hX6GoHjPzGFPpFuA
+					{ id: '5mJZZb9PqDA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/5mJZZb9PqDA?si=4fs_4rndiVPmvWc-
+					{ id: '-IGzdBQIKvk', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/-IGzdBQIKvk?si=OziKMubRWvqFCL9K
+					{ id: 'gvhaLBqIMlU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/gvhaLBqIMlU?si=2cPM2zI4yR16gewR
+					{ id: 'Jn4jafMg6bo', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/Jn4jafMg6bo?si=nX3gI6449IFNHzgz
+					{ id: 'OrwC-AGuDAU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/OrwC-AGuDAU?si=JSk7KjZw8VTlp3oE
+					{ id: 'yx2qB0-KyhQ', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/yx2qB0-KyhQ?si=h8tsaKl4k-XJX_8F
+					
+					{ id: '3Gun-58xiy0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/3Gun-58xiy0?si=degmFXxdYljIoSHy
+					{ id: 'f07lCuJBXHw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/f07lCuJBXHw?si=T6TRCBEyRr0zaxdg
+					{ id: '_724yh9YxUM', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/_724yh9YxUM?si=cR0VQDehMk5FhJlt
+					{ id: 'r11YnOtNWTM', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/r11YnOtNWTM?si=WQBkT6JM6OgtDXyf
+					{ id: 'fsL3JMQZ3mM', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/fsL3JMQZ3mM?si=PchQoLvS9zz-pIG1
+					
+                ]
+            },
+			
+			
+            joelOsteen: {
+                label: 'Joel Osteen',
+                channel: 'Joel Osteen Ministries',
+                videos: [
+                    { id: 'YKLYz9KZsp4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/YKLYz9KZsp4?si=Ztjm532FTAk9yGmA
+                    { id: 'AdcGhzDcNPw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/AdcGhzDcNPw?si=irzUFHwvtrIzVL3n
+					{ id: 'Faoqa1nObEQ', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/Faoqa1nObEQ?si=3uJFPP3_3HSBM3Eq
+					{ id: 'UM3lrm2hJs0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/UM3lrm2hJs0?si=RKbkAy2y2404QbVw
+					{ id: 'ZRdkl7UUL9A', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/ZRdkl7UUL9A?si=tzRB_9n-fwCynu9B
+					{ id: 'cLn2WUwc3OQ', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/cLn2WUwc3OQ?si=tQhN_gtfqZiKwoh6
+					{ id: '1DAZ413Wiwo', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/1DAZ413Wiwo?si=G1sdtfof2XTx-QR-
+					{ id: 'QMlJzwEchbM', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/QMlJzwEchbM?si=pPPDSoJzj0FsM05c
+					{ id: 'vVngkDp6io4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/vVngkDp6io4?si=sxGaimt8W57iha80
+					{ id: 'qvVgRxgTvac', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/qvVgRxgTvac?si=1JeVzvI4erpAo0Tb
+					
+					{ id: 'D-U0Sfphfrw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/D-U0Sfphfrw?si=YrjtRzmWHiEQkJcV
+					{ id: 'OjbyrwJa2zc', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/OjbyrwJa2zc?si=kFd_ZAZQ99IFbvo0
+					{ id: '45xVpfvvK-g', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/45xVpfvvK-g?si=YWa6SfxjMRc6fHPL
+					{ id: 'g8D913ndURk', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/g8D913ndURk?si=Ws93s2PHBSeIp0CY
+					{ id: '0skooOuQMrA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/0skooOuQMrA?si=EBbwgWJX3p7oMcVB
+					{ id: '0t0Q-GM15XI', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/0t0Q-GM15XI?si=Jh_5NPHsbBC_gmcT
+					{ id: 'PUOiH2zgOa0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/PUOiH2zgOa0?si=k9z6E9UmrL1HvYoj
+					{ id: 'wNX9Ca-B1Hk', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/wNX9Ca-B1Hk?si=Sdr04DTvCmdLdGT0
+					{ id: 'Nruw3bfOCyw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/Nruw3bfOCyw?si=twZzE51jNlNuWQjE
+					{ id: '2MHGhq6LlJ0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/2MHGhq6LlJ0?si=cQ8LnNdxIjLJ31We
+					
+					{ id: 'btZ8U2RO5pg', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/btZ8U2RO5pg?si=AiJTBz7GxxvfzOi0
+					{ id: 'pbj5zzHSxPU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/pbj5zzHSxPU?si=p8TySGht8JXSt8R6
+					{ id: 'HeRPBHCKpmg', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/HeRPBHCKpmg?si=sDyRPVrQK0Fr8Ign
+					{ id: 'kgbGJF3UQRA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/kgbGJF3UQRA?si=apxuu-s67Ka2ZONi
+					{ id: '7FTOJuJtFg0', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/7FTOJuJtFg0?si=qT-jWINB7OP7Ogg_
+					{ id: 'VrFZYW3WNoQ', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/VrFZYW3WNoQ?si=B_6auYTswzjaD7Za
+					{ id: 'I1XTMjdO7h4', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/I1XTMjdO7h4?si=Q3JPn_JrB7qn8R3P
+					{ id: 'SJtrsmWRxeI', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/SJtrsmWRxeI?si=r6VyJpR4BPZnHUf0
+					{ id: 'CIj1LKpCNoc', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/CIj1LKpCNoc?si=pEUW42v7aIBJj3Ih
+					
+					{ id: 'di5QXSnFQOo', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/di5QXSnFQOo?si=qnoCN2jXaUjxvhde
+					{ id: 'Jt3yFod2oAE', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/Jt3yFod2oAE?si=ym6o8ofjxdA0D7dE
+					{ id: 'yOiN_tXOxGg', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/yOiN_tXOxGg?si=71Bbyvl229I0cG0W
+					{ id: 'X6B8Jnqv0DU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/X6B8Jnqv0DU?si=t2FYh1nI3nrAjMKt
+					{ id: '_aygJFMCvOo', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/_aygJFMCvOo?si=QOdILHd83WK77aqD
+					{ id: 'Yiin9hYvV-s', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/Yiin9hYvV-s?si=SmOFqxnHsKR4Hlp_
+					{ id: 'jmNyLw3jjrA', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/jmNyLw3jjrA?si=pjawODf-2r4DA7xy
+					{ id: 'IZP8d19UiAw', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/IZP8d19UiAw?si=nX64POb3tCzj6PR8
+					{ id: '452YvmOwXnU', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/452YvmOwXnU?si=9QDKhAP3cuggXxUA
+					
+					{ id: 'WVH50hA5zDE', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/WVH50hA5zDE?si=EnyGnx1YaXGWe22o
+					{ id: 'P-92R3giv10', title: 'Word', rate: 1.25 }, // https://youtube.com/shorts/P-92R3giv10?si=nOUK6NAiJfMirJXo
+					
+                ]
+            },
+			/*
+			angusBuchan: {
+                label: 'Angus Buchan',
+                channel: 'Angus Buchan',
+                videos: [
+                    { id: '1V11wMb87N0', title: 'Encouragement', rate: 1 }, // https://youtube.com/shorts/1V11wMb87N0?si=R04OVGX-BZVnCaXI
+                    { id: 'hAjFbQIEEhE', title: 'Encouragement', rate: 1 }, // https://youtube.com/shorts/hAjFbQIEEhE?si=i3QfeGYSJGRCXWxv
+					{ id: 'MHNg4jtu4DE', title: 'Encouragement', rate: 1 }, // https://youtube.com/shorts/MHNg4jtu4DE?si=414OALKuU5p6piYL
+					{ id: '-xrUmWy8vAU', title: 'Encouragement', rate: 1 }, // https://youtube.com/shorts/-xrUmWy8vAU?si=88spIxGEZs07Et4M
+					{ id: 'IWTPN8cOLN8', title: 'Encouragement', rate: 1 }, // https://youtube.com/shorts/IWTPN8cOLN8?si=LmXWkLXS4FlMYpn7
+					{ id: 'm3Jn6NP1G_E', title: 'Encouragement', rate: 1 }, // https://youtube.com/shorts/m3Jn6NP1G_E?si=lJr2InTp1jbw3LeU
+                ]
+            }
+			*/
+        };
+
+        // "Explore" follows a fixed cadence — three music videos, then
+        // one teaching ("Word") video, repeating — while randomizing
+        // *which* video fills each slot. Videos are classified by their
+        // own `title` field (not by ministry), since a few worship
+        // channels have the occasional Word-titled clip mixed in and
+        // vice versa; going by title keeps those correctly sorted.
+        function classifyExploreVideos() {
+            const music = [];
+            const teaching = [];
+            Object.values(MINISTRIES).forEach((m) => {
+                m.videos.forEach((v) => {
+                    const entry = { ...v, channel: m.channel };
+                    (v.title === 'Word' ? teaching : music).push(entry);
+                });
+            });
+            return { music, teaching };
+        }
+
+        function shuffle(arr) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        // Explore session state. Shuffled once per "session" — i.e.
+        // whenever the user lands on Explore fresh, see
+        // resetExploreFeedState() — then held stable while they scroll,
+        // so the concrete video order differs visit to visit but never
+        // reshuffles out from under someone mid-scroll. cadencePos
+        // persists across every scroll-triggered load so the 3-music/
+        // 1-teaching rhythm never resets or skips a beat.
+        let exploreFeedState = null;
+
+        function resetExploreFeedState() {
+            const { music, teaching } = classifyExploreVideos();
+            exploreFeedState = {
+                musicPool: music,
+                teachingPool: teaching,
+                musicQueue: shuffle(music),
+                teachingQueue: shuffle(teaching),
+                cadencePos: 0,
+            };
+        }
+
+        // Returns the next video for the current cadence slot. When a
+        // pool (music or teaching) runs dry — music will empty roughly
+        // 3x faster than teaching, given the 3:1 cadence — it's
+        // reshuffled fresh and looped rather than letting the pattern
+        // stop, so Explore can scroll indefinitely.
+        function nextExploreVideo() {
+            if (!exploreFeedState) resetExploreFeedState();
+            const isTeachingSlot = exploreFeedState.cadencePos % 4 === 3;
+            exploreFeedState.cadencePos++;
+
+            const queueKey = isTeachingSlot ? 'teachingQueue' : 'musicQueue';
+            const poolKey = isTeachingSlot ? 'teachingPool' : 'musicPool';
+            if (exploreFeedState[queueKey].length === 0) {
+                exploreFeedState[queueKey] = shuffle(exploreFeedState[poolKey]);
+            }
+            return exploreFeedState[queueKey].shift();
+        }
+
+        function buildBlendedFeed(count) {
+            const batch = [];
+            for (let i = 0; i < count; i++) batch.push(nextExploreVideo());
+            return batch;
+        }
+
+        // Batch size per getFeedData('forYou') call — matches the total
+        // video count across all ministries, just to keep load/DOM
+        // growth pacing similar to before rather than an arbitrary number.
+        const EXPLORE_BATCH_SIZE = Object.values(MINISTRIES)
+            .reduce((sum, m) => sum + m.videos.length, 0);
+
+        function getFeedData(sourceKey) {
+            if (sourceKey === 'forYou') return buildBlendedFeed(EXPLORE_BATCH_SIZE);
+            return MINISTRIES[sourceKey].videos.map((v) => ({ ...v, channel: MINISTRIES[sourceKey].channel }));
+        }
+
+        const feedContainer = document.getElementById('feed-container');
+        const categoryTrigger = document.getElementById('category-trigger');
+        const categoryOverlay = document.getElementById('category-overlay');
+        const currentCategoryLabel = document.getElementById('current-category-label');
+        const closeOverlayBtn = document.querySelector('.close-overlay');
+        const menuOptionsContainer = document.getElementById('menu-options-container');
+
+        // Build the source picker from MINISTRIES + the synthetic
+        // "Explore" blend, so the markup never has to be hand-kept in
+        // sync with the data.
+        const SOURCES = [
+            { key: 'forYou', label: 'Mixed', sub: 'MIXED CONTENT' },
+            ...Object.entries(MINISTRIES).map(([key, m]) => ({ key, label: m.label, sub: (m.label === 'Joseph Prince' || m.label === 'Joel Osteen') ? 'Teaching' : 'Music' }))
+        ];
+        menuOptionsContainer.innerHTML = SOURCES.map((s, i) => `
+            <div class="overlay-option${i === 0 ? ' active' : ''}" data-value="${s.key}" role="menuitem" tabindex="0">
+                ${s.label}
+                <span class="option-sub">${s.sub}</span>
+            </div>
+        `).join('');
+
+        const options = document.querySelectorAll('.overlay-option');
+
+        const muteButton = document.getElementById('mute-button');
+        const iconMuted = document.getElementById('icon-muted');
+        const iconUnmuted = document.getElementById('icon-unmuted');
+
+        let currentCategory = 'forYou';
+        let isLoading = false;
+        let hasUserScrolled = false;
+        let screenCounter = 0;
+
+        // --- YouTube IFrame API state ---
+        //
+        // NOTE ON A PAST BUG: backward-scroll lag with sound on
+        // ------------------------------------------------------
+        // Symptom: scrolling back to a previously-watched video (n-2 and
+        // further back) would visibly hang before playback started —
+        // but only when the mute toggle had sound ON. With sound off,
+        // the same backward scroll was instant.
+        //
+        // Root cause: cleanupDistantPlayers() (below) intentionally
+        // destroys every player except the active one and the single
+        // prewarmed screen ahead of it, to avoid idle players starving
+        // resources from the next prewarm. That means scrolling back
+        // to an older video always rebuilds a brand-new YT.Player from
+        // scratch (new iframe, new YouTube bootstrap, new handshake) —
+        // there's no "resume" happening, and that rebuild cost is real
+        // and unavoidable given that trade-off.
+        //
+        // What made it *worse* specifically when unmuted: browsers gate
+        // *starting* playback with audio on behind a much stricter
+        // autoplay-permission check than muted playback (which is
+        // essentially always allowed). The old code rebuilt players
+        // with `mute: userMuted ? 1 : 0` and, on resume, explicitly
+        // called unMute() *before* playVideo(). That's "unmuted
+        // autoplay," which browsers can silently block/delay, forcing
+        // extra negotiation before the video actually started — on top
+        // of the already-real rebuild cost above.
+        //
+        // Fix: every player now always starts muted (`mute: 1` in
+        // createPlayer's playerVars), regardless of userMuted. The real
+        // mute preference is applied only in onStateChange, once the
+        // player actually reaches YT.PlayerState.PLAYING — toggling the
+        // mute of media that's already playing isn't subject to the
+        // same strict gate, so it's safe to do unconditionally there.
+        // activateScreen() no longer pre-syncs mute state before calling
+        // playVideo(); doing so was exactly the unmuted-autoplay pattern
+        // that tripped the gate on every rebuild.
+        //
+        // Net effect: the unavoidable iframe-rebuild cost remains (still
+        // a real rebuild delay on any backward scroll past the prewarm
+        // window), but the extra audio-permission stall on top of it is
+        // gone. If backward-scroll latency ever needs to shrink further,
+        // the next lever is widening cleanupDistantPlayers' keepIds to
+        // also retain one screen behind the current one, trading a bit
+        // more memory/decode overhead for a warm "scroll back one" case.
+        let ytApiReady = false;
+        const playerMap = new Map();   // screenId -> YT.Player
+        let activeScreenId = null;
+        let userMuted = true;          // start muted: required for reliable autoplay
+        let furthestIndex = null;      // highest screen index reached so far — the
+                                        // "high-water mark" used to detect backward
+                                        // scrolling past n-1 (see forceMuteForBackwardJump)
+        let previousIndex = null;      // index of the last activated screen, used to
+                                        // tell backward steps apart from forward ones
+
+        // How long to wait for youtube.com/iframe_api to call back before
+        // assuming it's genuinely unreachable (blocked domain, offline,
+        // ad/content blocker, youtube.com outage) rather than just slow.
+        // Without this, a failed load leaves every screen a permanently
+        // blank black rectangle with no explanation — ytApiReady simply
+        // never becomes true, and activateScreen silently no-ops forever.
+        const YT_API_TIMEOUT_MS = 10000;
+        const ytLoadErrorBanner = document.getElementById('yt-load-error-banner');
+        const ytLoadErrorRetry = document.getElementById('yt-load-error-retry');
+        let ytApiTimeoutId = null;
+
+        function showYtLoadError() {
+            if (ytApiReady) return; // succeeded in the meantime; nothing to report
+            ytLoadErrorBanner.classList.add('visible');
+        }
+
+        function loadYouTubeApi() {
+            ytLoadErrorBanner.classList.remove('visible');
+            clearTimeout(ytApiTimeoutId);
+            ytApiTimeoutId = setTimeout(showYtLoadError, YT_API_TIMEOUT_MS);
+
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            // Some blockers reject the request outright rather than just
+            // hanging, which fires onerror immediately — surface the same
+            // banner right away instead of waiting out the full timeout.
+            tag.onerror = showYtLoadError;
+            document.head.appendChild(tag);
+        }
+
+        loadYouTubeApi();
+
+        ytLoadErrorRetry.addEventListener('click', () => {
+            // The iframe API doesn't support being loaded twice, and the
+            // simplest reliable way to get a clean retry (re-attach
+            // players, re-observe screens, re-run onYouTubeIframeAPIReady)
+            // is just reloading the page.
+            window.location.reload();
+        });
+
+        window.onYouTubeIframeAPIReady = function () {
+            ytApiReady = true;
+            clearTimeout(ytApiTimeoutId);
+            ytLoadErrorBanner.classList.remove('visible');
+            // Activate whatever screen the observer already marked active
+            document.querySelectorAll('.video-screen.active').forEach(activateScreen);
+        };
+
+        // --- Playback Observer: only the >=60%-visible screen plays ---
+        // (Mirrors YouTube's own embedded-player rule: don't autoplay
+        // until the player is more than half visible, and never run
+        // more than one autoplaying player at a time.)
+        const playbackObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                const screen = entry.target;
+                if (entry.intersectionRatio >= 0.6) {
+                    screen.classList.add('active');
+                    activateScreen(screen);
+                } else {
+                    screen.classList.remove('active');
+                    safePause(screen.dataset.screenId);
+                }
+            });
+        }, { root: feedContainer, threshold: [0, 0.6] });
+
+        // Every entry in playerMap is a wrapper — not the raw YT.Player —
+        // because `new YT.Player()` returns before the iframe handshake
+        // finishes. Calling instance methods (playVideo, mute, etc.)
+        // before `onReady` fires throws "playVideo is not a function",
+        // so every call below goes through wantPlay/ready flags instead
+        // of touching player.instance directly until it's safe.
+        function safePlay(screenId) {
+            const wrapper = playerMap.get(screenId);
+            if (!wrapper) return;
+            wrapper.wantPlay = true;
+            if (wrapper.ready) {
+                try { wrapper.instance.playVideo(); } catch (e) {}
+            }
+        }
+
+        function safePause(screenId) {
+            const wrapper = playerMap.get(screenId);
+            if (!wrapper) return;
+            wrapper.wantPlay = false;
+            if (wrapper.ready) {
+                try { wrapper.instance.pauseVideo(); } catch (e) {}
+            }
+        }
+
+        // Builds a YT.Player for a screen. When wantPlay is false this is a
+        // "prewarm" — it pays the iframe-injection + handshake cost early,
+        // while the video sits cued and paused, so that later calling
+        // safePlay() on it is just a playVideo() call instead of a
+        // from-scratch player build.
+        function createPlayer(screen, wantPlay) {
+            const screenId = screen.dataset.screenId;
+            if (playerMap.has(screenId)) return playerMap.get(screenId);
+
+            const wrapper = { instance: null, ready: false, wantPlay, errored: false };
+            playerMap.set(screenId, wrapper);
+
+            wrapper.instance = new YT.Player('player-mount-' + screenId, {
+                videoId: screen.dataset.videoId,
+                playerVars: {
+                    autoplay: wantPlay ? 1 : 0,
+                    // Always start muted, regardless of the user's mute
+                    // preference. Browsers gate *starting* playback with
+                    // audio on behind a much stricter autoplay-permission
+                    // check than muted playback (which is essentially
+                    // always allowed); starting muted and then unmuting
+                    // once PLAYING actually fires (see onStateChange)
+                    // sidesteps that gate instead of tripping it on every
+                    // rebuild.
+                    mute: 1,
+                    playsinline: 1,
+                    controls: 1, // native YouTube controls
+                    rel: 0,
+                    iv_load_policy: 3,
+                    cc_load_policy: 0 // don't auto-show captions
+                },
+                events: {
+                    onReady: (e) => {
+                        wrapper.ready = true;
+                        const rate = parseFloat(screen.dataset.rate) || 1;
+                        try { e.target.setPlaybackRate(rate); } catch (err) {}
+                        // Some videos force captions on regardless of
+                        // cc_load_policy; this is a belt-and-braces
+                        // second attempt to turn them off explicitly.
+                        try { e.target.unloadModule('captions'); } catch (err) {}
+                        // Only actually play if this screen is still
+                        // the one the user wants playing — by the time
+                        // the handshake finishes they may have already
+                        // scrolled past it, or this may just be a
+                        // prewarm that hasn't been reached yet.
+                        if (wrapper.wantPlay) {
+                            try { e.target.playVideo(); } catch (err) {}
+                        } else {
+                            try { e.target.pauseVideo(); } catch (err) {}
+                        }
+                    },
+                    onStateChange: (e) => {
+                        if (e.data === YT.PlayerState.PLAYING) {
+                            // Every player starts muted (see createPlayer).
+                            // Now that playback has actually begun, bring
+                            // it in line with the user's real preference —
+                            // toggling the mute of already-playing media
+                            // isn't subject to the stricter unmuted-autoplay
+                            // gate, so this is safe to do unconditionally.
+                            try {
+                                if (userMuted) e.target.mute();
+                                else e.target.unMute();
+                            } catch (err) {}
+                        } else if (e.data === YT.PlayerState.ENDED) {
+                            // Only advance if this screen is still the
+                            // active one — a stale prewarmed/background
+                            // player finishing shouldn't move the feed.
+                            if (AUTOPLAY_ENABLED && screen.dataset.screenId === activeScreenId) {
+                                advanceToNextScreen(screen);
+                            }
+                        }
+                    },
+                    // YouTube error codes here (2 invalid param, 5 HTML5
+                    // player error, 100 video not found/removed, 101/150
+                    // embedding disabled by the uploader) are all things
+                    // this app has no way to fix or retry around — the
+                    // video is simply unplayable. Treat it like it ended:
+                    // skip forward automatically rather than leaving the
+                    // user stuck looking at a dead/blank player.
+                    onError: (e) => {
+                        wrapper.errored = true;
+                        console.warn('YouTube playback error', e.data, 'on screen', screenId);
+                        if (screen.dataset.screenId === activeScreenId) {
+                            advanceToNextScreen(screen, true);
+                        }
+                        // If this was only a prewarmed (not-yet-active)
+                        // player, we don't advance now — activateScreen
+                        // checks wrapper.errored and skips straight past
+                        // it once the user actually reaches this screen.
+                    }
+                }
+            });
+
+            return wrapper;
+        }
+
+        // Quietly builds the player for the next screen in the feed while
+        // the current one is still playing, so it's already warmed up by
+        // the time the user swipes to it.
+        function prewarmNextScreen(screen) {
+            const next = screen.nextElementSibling;
+            if (!next || !next.classList.contains('video-screen')) return;
+            if (playerMap.has(next.dataset.screenId)) return; // already warmed, active, or played
+            createPlayer(next, false);
+        }
+
+        // Advances the feed to the next screen when the current video
+        // ends, mirroring what a manual swipe-up does: the scroll fires
+        // the IntersectionObserver, which activates the next screen and
+        // pauses this one. If there's no next screen yet (rare — the
+        // infinite-scroll loader stays well ahead of playback), this is
+        // simply a no-op and playback just stops on the last video.
+        function advanceToNextScreen(screen, instant) {
+            const next = screen.nextElementSibling;
+            if (!next || !next.classList.contains('video-screen')) return;
+            next.scrollIntoView({ behavior: instant ? 'instant' : 'smooth', block: 'start' });
+        }
+
+        // Watching sequentially (0,1,2,...) moves the high-water mark
+        // forward with it, so being on the immediately-previous screen
+        // (n-1 relative to the mark) is always tolerated with no mute
+        // change — that one player is cheap to resume. Anything further
+        // behind the mark than that (n-2 or more) is guaranteed to need
+        // a from-scratch player rebuild, per cleanupDistantPlayers above,
+        // so we force mute for it and pulse the icon once to explain why
+        // sound just went quiet. We deliberately compare against the
+        // *mark*, not just the previously-active screen, because a user
+        // stepping backward one screen at a time (10 -> 9 -> 8 -> ...)
+        // never differs from their immediately-prior activation by more
+        // than 1 — only the cumulative distance from where they started
+        // reveals that they're now several screens deep into "rebuild"
+        // territory.
+        function forceMuteForBackwardJump() {
+            if (userMuted) return; // already muted; nothing new to announce
+            userMuted = true;
+            updateMuteIcon();
+            const wrapper = playerMap.get(activeScreenId);
+            if (wrapper && wrapper.ready && wrapper.instance) {
+                try { wrapper.instance.mute(); } catch (e) {}
+            }
+            muteButton.classList.remove('auto-muted-pulse');
+            // Force a reflow so re-adding the class restarts the animation.
+            void muteButton.offsetWidth;
+            muteButton.classList.add('auto-muted-pulse');
+        }
+
+        function activateScreen(screen) {
+            if (!ytApiReady) return; // will be retried from onYouTubeIframeAPIReady
+            const screenId = screen.dataset.screenId;
+            const screenIndex = parseInt(screenId, 10);
+            // "Behind the peak" alone isn't enough to justify muting —
+            // that's also true for a few steps while catching back up
+            // after a previous auto-mute, and forward progress should
+            // never re-trigger it. Only an actual backward step (index
+            // decreasing from the last activation) that lands more than
+            // one behind the peak counts.
+            const movingBackward = previousIndex !== null && screenIndex < previousIndex;
+
+            if (furthestIndex === null || screenIndex > furthestIndex) {
+                furthestIndex = screenIndex;
+            } else if (movingBackward && screenIndex < furthestIndex - 1) {
+                forceMuteForBackwardJump();
+            }
+            previousIndex = screenIndex;
+            activeScreenId = screenId;
+
+            if (!playerMap.has(screenId)) {
+                createPlayer(screen, true);
+            } else {
+                const wrapper = playerMap.get(screenId);
+                if (wrapper.errored) {
+                    // This one already failed while it was only
+                    // prewarmed in the background — don't bother trying
+                    // to play it, just carry straight on to the next
+                    // screen the same way an active-screen error would.
+                    advanceToNextScreen(screen, true);
+                } else {
+                    // No pre-play mute sync here on purpose: forcing unmute
+                    // before playback has actually (re)started is exactly the
+                    // unmuted-autoplay pattern that trips the browser's
+                    // stricter gate. onStateChange applies the real mute
+                    // preference once PLAYING actually fires instead.
+                    safePlay(screenId);
+                }
+            }
+            cleanupDistantPlayers(screenId);
+            prewarmNextScreen(screen);
+        }
+
+        // Only the active screen and the one screen prewarmed ahead of it
+        // need to stay alive. Everything else is destroyed immediately
+        // rather than left idling — an idle player still holds a live
+        // decode session and an open connection to YouTube's CDN, and
+        // letting a handful of those pile up in the background is what
+        // was starving the *next* prewarm of the resources it needed,
+        // producing the "fast for a few, then stalls" pattern.
+        //
+        // Trade-off: scrolling back a few videos will now rebuild that
+        // player from scratch rather than resuming an already-warm one.
+        function cleanupDistantPlayers(currentScreenId) {
+            const currentIndex = parseInt(currentScreenId, 10);
+            const keepIds = new Set([String(currentIndex), String(currentIndex + 1)]);
+            playerMap.forEach((wrapper, id) => {
+                if (!keepIds.has(id)) {
+                    if (wrapper.instance) {
+                        try { wrapper.instance.destroy(); } catch (e) {}
+                    }
+                    playerMap.delete(id);
+                }
+            });
+        }
+
+        function destroyAllPlayers() {
+            playerMap.forEach((wrapper) => {
+                if (wrapper.instance) {
+                    try { wrapper.instance.destroy(); } catch (e) {}
+                }
+            });
+            playerMap.clear();
+            activeScreenId = null;
+            furthestIndex = null; // fresh feed, so screen indices restart from 0
+            previousIndex = null;
+        }
+
+        // Set to true to bring back the "Swipe Up" hint on first load.
+        const SHOW_SCROLL_HINT = false;
+
+        // Set to false to disable autoplay-to-next-video. When true
+        // (the default), finishing a video automatically scrolls the
+        // feed to the next screen and plays it, TikTok/Shorts-style.
+        const AUTOPLAY_ENABLED = true;
+
+        // --- Core Logic: Append Video Screens ---
+        function appendVideos(category, isFirstLoad = false) {
+            const data = getFeedData(category);
+
+            data.forEach((item) => {
+                const screenId = screenCounter++;
+                const screen = document.createElement('div');
+                screen.className = 'video-screen';
+                screen.dataset.screenId = screenId;
+                screen.dataset.videoId = item.id;
+                screen.dataset.rate = item.rate || 1;
+                screen.setAttribute('role', 'article');
+                screen.setAttribute('aria-label', `Video: ${item.title}, ${item.channel}`);
+
+                const hintHtml = (SHOW_SCROLL_HINT && isFirstLoad && screenId === 0 && !hasUserScrolled)
+                    ? '<div class="scroll-hint" aria-hidden="true">Swipe Up</div>'
+                    : '';
+
+                screen.innerHTML = `
+                    <div class="video-frame">
+                        <div class="player-mount" id="player-mount-${screenId}"></div>
+                    </div>
+                    ${hintHtml}
+                `;
+
+                feedContainer.appendChild(screen);
+                playbackObserver.observe(screen);
+            });
+        }
+
+        // Keeps the header pill text, its aria-label, and the "active"
+        // highlight in the source menu all derived from a single source
+        // of truth (the category actually being rendered), rather than
+        // being a side effect of *how* renderFeed got called. Previously
+        // this sync only happened inside the menu's click handler, so a
+        // hypothetical future renderFeed('forYou') call from anywhere
+        // else (a reset button, a deep link, etc.) would render the
+        // right videos while leaving the header showing the *previous*
+        // label — a silent mismatch between what's on screen and what
+        // the UI claims is on screen.
+        function syncCategoryUI(category) {
+            const source = SOURCES.find((s) => s.key === category);
+            const label = source ? source.label : category;
+            currentCategoryLabel.textContent = label;
+            categoryTrigger.setAttribute('aria-label', `Current source: ${label}. Change source.`);
+            options.forEach((opt) => {
+                opt.classList.toggle('active', opt.getAttribute('data-value') === category);
+            });
+        }
+
+        function renderFeed(category) {
+            syncCategoryUI(category);
+            destroyAllPlayers();
+            feedContainer.innerHTML = '';
+            feedContainer.scrollTop = 0;
+            screenCounter = 0;
+            if (category === 'forYou') resetExploreFeedState();
+            appendVideos(category, true);
+            appendVideos(category, false);
+        }
+
+        feedContainer.addEventListener('scroll', () => {
+            if (feedContainer.scrollTop + feedContainer.clientHeight >= feedContainer.scrollHeight - 100) {
+                if (!isLoading) {
+                    isLoading = true;
+                    appendVideos(currentCategory);
+                    setTimeout(() => { isLoading = false; }, 100);
+                }
+            }
+        });
+
+        // --- ACCESSIBILITY LOGIC ---
+        function handleEnterSpace(e, callback) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                callback();
+            }
+        }
+
+        function openMenu() {
+            categoryOverlay.classList.add('open');
+            categoryTrigger.setAttribute('aria-expanded', 'true');
+            setBackgroundInert(true);
+            setTimeout(() => {
+                const activeOpt = document.querySelector('.overlay-option.active');
+                if (activeOpt) activeOpt.focus();
+                else if (options.length > 0) options[0].focus();
+                else closeOverlayBtn.focus();
+            }, 305);
+        }
+
+        function closeMenu() {
+            categoryOverlay.classList.remove('open');
+            categoryTrigger.setAttribute('aria-expanded', 'false');
+            setBackgroundInert(false);
+            categoryTrigger.focus();
+        }
+
+        // Makes every top-level element except the overlay itself
+        // unfocusable (and unclickable, and hidden from assistive tech)
+        // while the source-picker modal is open. Without this, Tab could
+        // walk focus out of the "modal" into background controls like
+        // the mute button or dark-mode toggle — which, combined with a
+        // z-index bug that let them render visibly on top of the modal
+        // backdrop, meant they were reachable by mouse/touch too, not
+        // just keyboard. `inert` handles all of that in one attribute
+        // (supported in all current major browsers); the explicit Tab
+        // handling below is a deliberate belt-and-suspenders fallback in
+        // case of an older/inconsistent `inert` implementation.
+        function setBackgroundInert(isInert) {
+            Array.from(document.body.children).forEach((el) => {
+                if (el === categoryOverlay) return;
+                if (isInert) el.setAttribute('inert', '');
+                else el.removeAttribute('inert');
+            });
+        }
+
+        // Keeps Tab (and Shift+Tab) cycling within just the two kinds of
+        // focusable elements inside the dialog — the source options and
+        // the close button — instead of letting focus run off either end
+        // into whatever the browser's default tab order finds next.
+        function trapTabKey(e) {
+            if (e.key !== 'Tab') return;
+            if (!categoryOverlay.classList.contains('open')) return;
+            const focusable = [...options, closeOverlayBtn]; // DOM order
+            if (focusable.length === 0) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const current = document.activeElement;
+            if (e.shiftKey) {
+                if (current === first || !focusable.includes(current)) {
+                    e.preventDefault();
+                    last.focus();
+                }
+            } else {
+                if (current === last || !focusable.includes(current)) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
+        }
+        categoryOverlay.addEventListener('keydown', trapTabKey);
+
+        function handleMenuNavigation(e) {
+            const isArrowUp = e.key === 'ArrowUp';
+            const isArrowDown = e.key === 'ArrowDown';
+            if (!isArrowUp && !isArrowDown) return;
+            e.preventDefault();
+            const optionsArray = Array.from(options);
+            const currentIndex = optionsArray.indexOf(document.activeElement);
+            if (currentIndex !== -1) {
+                let nextIndex = isArrowDown
+                    ? (currentIndex + 1) % optionsArray.length
+                    : (currentIndex - 1 + optionsArray.length) % optionsArray.length;
+                optionsArray[nextIndex].focus();
+            } else {
+                options[0].focus();
+            }
+        }
+
+        categoryTrigger.addEventListener('click', openMenu);
+        categoryTrigger.addEventListener('keydown', (e) => handleEnterSpace(e, openMenu));
+        closeOverlayBtn.addEventListener('click', closeMenu);
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && categoryOverlay.classList.contains('open')) closeMenu();
+        });
+
+        options.forEach((option) => {
+            const selectOption = () => {
+                currentCategory = option.getAttribute('data-value');
+                renderFeed(currentCategory);
+                closeMenu();
+            };
+            option.addEventListener('click', selectOption);
+            option.addEventListener('keydown', (e) => handleEnterSpace(e, selectOption));
+            option.addEventListener('keydown', handleMenuNavigation);
+        });
+
+        // --- MUTE LOGIC (video sound, not background audio) ---
+        function updateMuteIcon() {
+            iconMuted.style.display = userMuted ? 'block' : 'none';
+            iconUnmuted.style.display = userMuted ? 'none' : 'block';
+            muteButton.setAttribute('aria-label', userMuted ? 'Unmute video' : 'Mute video');
+        }
+
+        function toggleMute() {
+            userMuted = !userMuted;
+            updateMuteIcon();
+            const wrapper = playerMap.get(activeScreenId);
+            if (wrapper && wrapper.ready && wrapper.instance) {
+                try {
+                    if (userMuted) wrapper.instance.mute();
+                    else wrapper.instance.unMute();
+                } catch (e) {}
+            }
+        }
+
+        muteButton.addEventListener('click', toggleMute);
+        muteButton.addEventListener('keydown', (e) => handleEnterSpace(e, toggleMute));
+        updateMuteIcon();
+
+        // Every session starts muted (autoplay requirement — see the note
+        // above `let userMuted = true`), so pulse the mute icon once on
+        // load to flag that sound is off and can be turned on, the same
+        // visual cue used when we auto-mute on a big backward scroll.
+        muteButton.classList.add('auto-muted-pulse');
+
+        // --- HIDE HINT ON FIRST SCROLL ---
+        feedContainer.addEventListener('scroll', () => {
+            if (hasUserScrolled) return;
+            const hint = document.querySelector('.scroll-hint');
+            if (hint) hint.style.opacity = '0';
+            hasUserScrolled = true;
+        });
+
+        // --- DARK MODE TOGGLE ---
+        const darkToggle = document.getElementById('dark-toggle');
+        const root = document.documentElement;
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const mobileQuery = window.matchMedia('(max-width: 600px)');
+
+        function applyTheme(dark) {
+            root.classList.toggle('dark', dark);
+            darkToggle.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+        }
+
+        // Some browsers/webviews (private-mode Safari, sandboxed iframes,
+        // certain in-app browsers like the Instagram/Facebook webview)
+        // throw a SecurityError just from *touching* localStorage, not
+        // only from exceeding quota. Since this script runs top-to-bottom
+        // in one block ending in renderFeed(), an uncaught throw here
+        // would previously abort initialization before the feed ever
+        // rendered a single video. These wrappers fail silently instead,
+        // falling back to "no saved preference" so theme resolution (and
+        // everything after it) can still proceed.
+        function safeGetStoredTheme() {
+            try { return localStorage.getItem('faithscrolling-theme'); }
+            catch (e) { return null; }
+        }
+        function safeSetStoredTheme(value) {
+            try { localStorage.setItem('faithscrolling-theme', value); }
+            catch (e) { /* not persisted this session; non-fatal */ }
+        }
+
+        function resolveTheme() {
+            if (mobileQuery.matches) {
+                // Mobile has no light mode to choose — always dark,
+                // and the toggle itself is hidden via CSS.
+                applyTheme(true);
+                return;
+            }
+            const savedTheme = safeGetStoredTheme();
+            applyTheme(savedTheme === 'dark' || (!savedTheme && prefersDark));
+        }
+
+        resolveTheme();
+        mobileQuery.addEventListener('change', resolveTheme);
+
+        darkToggle.addEventListener('click', () => {
+            if (mobileQuery.matches) return; // hidden on mobile; guard just in case
+            const isDark = !root.classList.contains('dark');
+            applyTheme(isDark);
+            safeSetStoredTheme(isDark ? 'dark' : 'light');
+        });
+        darkToggle.addEventListener('keydown', (e) => handleEnterSpace(e, () => darkToggle.click()));
+
+        // --- INITIALIZATION ---
+        renderFeed(currentCategory);
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,1135 @@
+<!--
+# Faith Scrolling Web App Code
+# GitHub: https://github.com/vbookshelf/Faith-Scrolling-Web-App-Code
+# License: MIT (You are free to share this code with others.)
+# Version: 1.0
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+    <title>Faith Scrolling | Feed your soul as you scroll</title>
+	<meta name="description" content="Feed on the Word by swiping through curated Bible verses, short-form music and teaching videos. Free. No ads. No signup.">
+	
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="https://faithscrolling.com/">
+	<meta property="og:title" content="FaithScrolling | Feed Your Soul As You Scroll">
+	<meta property="og:description" content="Feed on the Word by swiping through curated Bible verses, short-form music and teaching videos. Free. No ads. No signup.">
+	<meta property="og:image" content="https://faithscrolling.com/sharing-preview.png">
+	
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:url" content="https://faithscrolling.com/">
+	<meta name="twitter:title" content="FaithScrolling | Feed Your Soul As You Scroll">
+	<meta name="twitter:description" content="Feed on the Word by swiping through curated Bible verses, short-form music and teaching videos. Free. No ads. No signup.">
+	<meta name="twitter:image" content="https://faithscrolling.com/sharing-preview.png">
+	
+    <link rel="icon" type="image/png" href="favicon.png">
+	
+    <!-- Self-hosted fonts (see fonts.css / fonts/) — no third-party
+         request to fonts.googleapis.com / fonts.gstatic.com needed.
+         Preloading the two fonts needed for first paint (body text +
+         verse text) so they're fetched immediately instead of waiting
+         for the CSS to be parsed. -->
+    <link rel="preload" as="font" type="font/woff2" href="fonts/lato-latin-400-normal.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="fonts/libre-baskerville-latin-400-italic.woff2" crossorigin>
+    <link rel="stylesheet" href="fonts.css">
+    
+    <style>
+        :root {
+            /* Palette: Premium Paper & Gold */
+            --bg-paper: #f0f2f5;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --accent-gold: #c5a059;
+            --accent-dark: #8d7039;
+            --body-bg-start: #fbfbf8;
+            --body-bg-end: #e8e6e1;
+            --pill-bg: rgba(255, 255, 255, 0.9);
+            --overlay-bg: rgba(255, 255, 255, 0.95);
+            --dark-toggle-bg: rgba(255, 255, 255, 0.9);
+            --verse-border: transparent;
+        }
+
+        :root.dark {
+            --bg-paper: #1a1a2e;
+            --text-primary: #e8e4d9;
+            --text-secondary: #9a9080;
+            --accent-gold: #d4af6a;
+            --accent-dark: #b8943e;
+            --body-bg-start: #12111a;
+            --body-bg-end: #1e1c28;
+            --pill-bg: rgba(30, 28, 40, 0.92);
+            --overlay-bg: rgba(18, 17, 26, 0.97);
+            --dark-toggle-bg: rgba(30, 28, 40, 0.92);
+            --verse-border: transparent;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Lato', sans-serif;
+            background-color: var(--body-bg-end);
+            background-image: radial-gradient(circle at center, var(--body-bg-start) 0%, var(--body-bg-end) 100%);
+            color: var(--text-primary);
+            overflow: hidden; 
+            height: 100vh;
+            height: 100dvh;
+            width: 100vw;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        /* --- The TikTok Scroll Container --- */
+        .feed-container {
+            height: 100vh;
+            height: 100dvh;
+            width: 100vw;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .feed-container::-webkit-scrollbar { display: none; }
+
+        /* --- Individual Screen (Verse) --- */
+        .verse-screen {
+            height: 100vh;
+            height: 100dvh;
+            width: 100vw;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            /* DESKTOP PADDING */
+            padding: 40px;
+            position: relative;
+            border-bottom: 1px solid var(--verse-border);
+        }
+        
+        /* Accessibility Focus Ring for Verse Screen */
+        .verse-screen:focus-visible {
+            outline: 3px solid var(--accent-gold);
+            outline-offset: -3px;
+        }
+
+        /* Inner Content Wrapper */
+        .content-wrapper {
+            /* DESKTOP WIDTH */
+            max-width: 500px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.8s ease-out;
+        }
+
+        .verse-screen.active .content-wrapper {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .cross-icon {
+            color: var(--accent-gold);
+            font-size: 24px;
+            margin-bottom: 30px;
+            opacity: 0.6;
+        }
+
+        .verse-text {
+            font-family: 'Libre Baskerville', serif;
+            /* DESKTOP FONT SIZE */
+            font-size: 1.8rem; 
+            line-height: 1.6;
+            color: var(--text-primary);
+            font-style: italic;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .verse-reference {
+            font-family: 'Raleway', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--accent-gold);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            position: relative;
+            display: inline-block;
+        }
+
+        .verse-reference::before {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 2px;
+            background-color: var(--accent-gold);
+            margin: 0 auto 15px auto;
+        }
+
+        /* --- Floating Header --- */
+        .floating-header {
+            position: fixed;
+            top: 20px;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none; 
+        }
+
+        .category-pill {
+            pointer-events: auto;
+            background: var(--pill-bg);
+            backdrop-filter: blur(10px);
+            padding: 12px 25px;
+            border-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            font-family: 'Raleway', sans-serif;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        /* Keyboard focus style for accessibility */
+        .category-pill:focus-visible, 
+        .overlay-option:focus-visible,
+        .close-overlay:focus-visible {
+            outline: 3px solid var(--accent-gold);
+            outline-offset: 2px;
+        }
+
+        /* --- Dropdown Overlay --- */
+        .category-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--overlay-bg);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .category-overlay.open { opacity: 1; visibility: visible; }
+
+        .overlay-option {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.5rem;
+            margin: 15px 0;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+            padding: 10px 20px;
+        }
+
+        .overlay-option:hover, .overlay-option.active { color: var(--accent-gold); font-style: italic; }
+
+        .close-overlay {
+            margin-top: 40px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 1px solid var(--text-secondary);
+            background: transparent;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* --- MOBILE "ZOOM" ADJUSTMENTS --- */
+        @media (max-width: 600px) {
+            .verse-screen {
+                /* Reduce padding to use more screen width */
+                padding: 15px;
+            }
+            
+            .content-wrapper {
+                /* Force content to use 92% of screen width */
+                max-width: none;
+                width: 92%;
+            }
+
+            .verse-text { 
+                /* MUCH LARGER TEXT */
+                font-size: 1.8rem; 
+                line-height: 1.4;
+                margin-bottom: 20px;
+            }
+
+            .verse-reference {
+                font-size: 1.1rem;
+            }
+
+            .cross-icon {
+                margin-bottom: 15px;
+                font-size: 28px;
+            }
+
+            /* --- NEW MOBILE-ONLY HINT STYLES --- */
+            .scroll-hint {
+                font-size: 1.2rem;
+                font-weight: 700;
+                color: var(--text-secondary);
+                opacity: 0.8;
+            }
+        }
+
+        /* Interaction hint */
+        .scroll-hint {
+            color: var(--accent-gold);
+            opacity: 0.6;
+            animation: bounce 2s infinite;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 40px; /* Space above */
+            transition: opacity 0.5s ease; /* For fade out */
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+            40% {transform: translateY(-10px);}
+            60% {transform: translateY(-5px);}
+        }
+
+        /* --- Dark Mode Toggle --- */
+        .dark-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 300;
+            width: 50px;
+            height: 50px;
+            background-color: var(--dark-toggle-bg);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+            transition: background-color 0.4s ease;
+        }
+
+        .dark-toggle:focus-visible {
+            outline: 3px solid var(--accent-gold);
+            outline-offset: 2px;
+        }
+
+        .dark-toggle svg {
+            width: 22px;
+            height: 22px;
+            color: var(--text-secondary);
+            transition: color 0.4s ease;
+        }
+
+        /* Lit bulb in dark mode — fill the bulb shape with accent gold */
+        :root.dark .dark-toggle .icon-bulb path {
+            stroke: var(--accent-gold);
+        }
+
+        /* --- Cross-page nav link (bottom-left, mirrors the bottom-right
+           utility buttons) --- */
+        .nav-link {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 300;
+            width: 50px;
+            height: 50px;
+            background-color: var(--dark-toggle-bg);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+            transition: background-color 0.4s ease, transform 0.2s ease;
+Text-decoration: none;
+        }
+        .nav-link:hover {
+            transform: scale(1.05);
+        }
+        .nav-link:focus-visible {
+            outline: 3px solid var(--accent-gold);
+            outline-offset: 2px;
+        }
+        .nav-link svg {
+            width: 26px;
+            height: 26px;
+            color: var(--text-secondary);
+        }
+
+    </style>
+</head>
+<body>
+
+    <header class="floating-header" role="banner">
+	    <div class="category-pill" id="category-trigger" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="Current Topic: Grace. Change Topic.">
+	        <span id="current-category-label">Grace</span>
+	        <span style="color: var(--accent-gold); font-size: 0.8em;" aria-hidden="true">▼</span>
+	    </div>
+	</header>
+
+    <main class="feed-container" id="feed-container" role="main" aria-label="Scripture Feed">
+        </main>
+
+    <div class="category-overlay" id="category-overlay" role="dialog" aria-modal="true" aria-label="Select Topic">
+	    <div role="menu" aria-label="Topic Options" id="menu-options-container">
+	        <div class="overlay-option active" data-value="grace" role="menuitem" tabindex="0">Grace</div>
+	        <div class="overlay-option" data-value="healing" role="menuitem" tabindex="0">Healing</div>
+	        <div class="overlay-option" data-value="wisdom" role="menuitem" tabindex="0">Wisdom</div>
+	        <div class="overlay-option" data-value="peace" role="menuitem" tabindex="0">Peace</div>
+	        <div class="overlay-option" data-value="provision" role="menuitem" tabindex="0">Provision</div>
+	        <div class="overlay-option" data-value="strength" role="menuitem" tabindex="0">Strength</div>
+	    </div>
+	
+	    <button class="close-overlay" aria-label="Close Menu">✕</button>
+	</div>
+
+    <button class="dark-toggle" id="dark-toggle" aria-label="Switch to dark mode">
+        <svg class="icon-bulb" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 21h6M10 17.5h4M12 3a7 7 0 0 1 4 12.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-1.26A7 7 0 0 1 12 3z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    </button>
+
+    <a class="nav-link" href="shorts.html" aria-label="Watch faith Shorts videos" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="5" width="18" height="14" rx="4" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M10 9l5 3-5 3V9z" fill="currentColor"/>
+        </svg>
+    </a>
+
+    <script>
+        const scriptures = {
+            healing: [
+                
+                { verse: "...I am the LORD who heals you.", reference: "Exodus 15:26 NKJV" },
+                
+                { verse: "But He was wounded for our transgressions, He was bruised for our iniquities; The chastisement for our peace was upon Him, And by His stripes we are healed.", reference: "Isaiah 53:5 NKJV" },
+				
+                { verse: "Then Jesus went around doing good and healing all who were oppressed by the devil, for God was with him.", reference: "Acts 10:38 NLT" },
+
+                { verse: "Woman, you are loosed from your infirmity.", reference: "Luke 13:12 NKJV" },
+				
+                { verse: "Suddenly, a man with leprosy approached him and knelt before him. “Lord,” the man said, “if you are willing, you can heal me and make me clean.”", reference: "Matthew 8:2 NLT" },
+				
+				
+				{ verse: "Jesus reached out and touched him. “I am willing,” he said. “Be healed!” And instantly the leprosy disappeared.", reference: "Matthew 8:3 NLT" },
+
+                { verse: 'But Jesus looked at them and said to them, “With men this is impossible, but with God all things are possible.”', reference: "Matthew 19:26 NKJV" },
+				
+                { verse: "Rise, take up your bed and walk.", reference: "John 5:8 NKJV" },
+				
+				{ verse: "I am the LORD, the God of all mankind. Is anything too hard for me?", reference: "Jeremiah 32:27 NIV" },
+				
+				{ verse: "Then Jesus shouted, “Lazarus, come out!”", reference: "John 11:43 NLT" },
+				
+				{ verse: "...as He is, so are we in this world.", reference: "1 John 4:17 NKJV" },
+				
+                { verse: "Who satisfies your mouth with good things, So that your youth is renewed like the eagle’s.", reference: "Psalm 103:5 NKJV" },
+				
+				{ verse: "...as your days, so shall your strength be.", reference: "Deuteronomy 33:25 ESV" },
+				
+				{ verse: "With long life I will satisfy him, And show him My salvation.", reference: "Psalm 91:16 NKJV" },
+				
+                { verse: "Moses was 120 years old when he died, yet his eyesight was clear, and he was as strong as ever.", reference: "Deut 34:7 NLT" },
+				
+				{ verse: "...and now behold, I am eighty-five years old today. I am still as strong today as I was on the day Moses sent me; as my strength was then, so my strength is now, for war and for going out and coming in. ", reference: "Joshua 14:10-11 NKJV" },
+				
+				{ verse: "A joyful heart is good medicine, but a broken spirit dries up the bones.", reference: "Proverbs 17:22 BSB" },
+
+                { verse: "Beloved, I pray that you may prosper in all things and be in health, just as your soul prospers.", reference: "3 John 1:2 NKJV" },
+				
+				{ verse: "And these signs will accompany those who believe: ...they will lay their hands on the sick, and they will be made well.", reference: "Mark 16:17-18 BSB" },
+				
+                { verse: "Heal the sick, cleanse the lepers, raise the dead, cast out demons. Freely you have received, freely give.", reference: "Matthew 10:8 NKJV" },
+				
+				{ verse: "I will not die, but I will live and proclaim what the LORD has done.", reference: "Psalm 118:17 BSB" },
+                
+            ],
+			
+            strength: [
+			
+                { verse: "All authority has been given to Me in heaven and on earth.", reference: "Matthew 28:18 NKJV" },
+				
+                { verse: 'When Jesus said to them, "I am he," they moved back and fell to the ground.', reference: "John 18:6 GNT" },
+				
+				{ verse: "I have given you authority to trample on snakes and scorpions and to overcome all the power of the enemy; nothing will harm you.", reference: "Luke 10:19 NIV" },
+				
+				{ verse: "But those who wait on the LORD Shall renew their strength; They shall mount up with wings like eagles, They shall run and not be weary, They shall walk and not faint.", reference: "Isaiah 40:31 NKJV" },
+				
+                { verse: "Be strong and of good courage; do not be afraid, nor be dismayed, for the LORD your God is with you wherever you go.", reference: "Joshua 1:9 NKJV" },
+
+                { verse: "Praise the Lord, my protector! He trains me for battle and prepares me for war. He is my protector and defender, my shelter and savior, in whom I trust for safety. He subdues the nations under me.", reference: "Psalm 144:1 GNT" },
+				
+                { verse: "I can do all things through Christ who strengthens me.", reference: "Philippians 4:13 NKJV" },
+				
+                { verse: "...be strong in the Lord and in the power of His might.", reference: "Ephesians 6:10-11 NKJV" },
+
+                { verse: "...I will build my church; and the gates of hell shall not prevail against it.", reference: "Matthew 16:18 KJV" },
+				
+				{ verse: "For the weapons of our warfare are not carnal but mighty in God for pulling down strongholds.", reference: "2 Corinthians 10:4 NKJV" },
+				
+				{ verse: "For God has not given us a spirit of fear, but of power and of love and of a sound mind.", reference: "2 Timothy 1:7 NKJV" },
+
+                { verse: "Suddenly a young lion came roaring at him, and the Spirit of the LORD came powerfully upon him, and he tore the lion apart with his bare hands...", reference: "Judges 14:5-6 BSB" },
+				
+				{ verse: "...greater is He who is in you than he who is in the world.", reference: "1 John 4:4 NASB" },
+				
+				{ verse: "You shall tread upon the lion and the cobra, The young lion and the serpent you shall trample underfoot.", reference: "Psalm 91:13 NKJV" },
+				
+				{ verse: "The sun shall not smite thee by day, nor the moon by night.", reference: "Psalm 121:6 KJV" },
+
+                { verse: "Heal the sick, cleanse the lepers, raise the dead, cast out demons. Freely you have received, freely give.", reference: "Matthew 10:8 NKJV" },
+
+                { verse: "Let God arise, Let His enemies be scattered...", reference: "Psalm 68:1 NKJV" },
+				
+                { verse: "Who is this King of glory? The LORD strong and mighty, The LORD mighty in battle.", reference: "Psalm 24:8 NKJV" },
+				
+                { verse: "When the enemy comes in like a flood, The Spirit of the LORD will lift up a standard against him.", reference: "Isaiah 59:19 NKJV" },
+
+                { verse: "The LORD will fight for you...", reference: "Exodus 14:14 NKJV" },
+
+                { verse: "Not by might nor by power, but by My Spirit, says the LORD of Hosts.", reference: "Zechariah 4:6 BSB" },
+				
+                { verse: "The LORD is my strength and my shield...", reference: "Psalm 28:7 NIV" },
+				
+				{ verse: "The LORD is the strength of my life; Of whom shall I be afraid?", reference: "Psalm 27:1 NKJV" },
+
+                { verse: "Do not gloat over me, my enemy! Though I have fallen, I will arise; though I sit in darkness, the LORD will be my light.", reference: "Micah 7:8 BSB" },
+				
+				{ verse: "If God is for us, who can be against us?", reference: "Romans 8:31 BSB" },
+
+                { verse: "Because He is at my right hand I shall not be moved.", reference: "Psalm 16:8 NKJV" },
+				
+                { verse: "For I know the plans I have for you,” says the LORD. “They are plans for good and not for disaster, to give you a future and a hope.", reference: "Jeremiah 29:11 NLT" },
+				
+				{ verse: '...I have put My words in your mouth. See, I have appointed you today over nations and kingdoms to uproot and tear down, to destroy and overthrow, to build and to plant.', reference: "Jeremiah 1:9-10 BSB" },
+				
+				{ verse: "No weapon formed against you shall prosper, And every tongue which rises against you in judgment You shall condemn.", reference: "Isaiah 54:17 NKJV" },
+				
+				{ verse: "The LORD will cause your enemies who rise against you to be defeated before your face; they shall come out against you one way and flee before you seven ways.", reference: "Deuteronomy 28:7 NKJV" },
+				
+				{ verse: "...you will trample on the wicked; they will be ashes under the soles of your feet...", reference: "Malachi 4:3 NIV" },
+				
+				{ verse: "The good man's children will be powerful in the land; his descendants will be blessed.", reference: "Psalm 112:2 GNT" },
+				
+                { verse: "The joy of the LORD is your strength.", reference: "Nehemiah 8:10 NKJV" },
+				
+            ],
+			
+            peace: [
+                
+                { verse: "If I say, “My foot is slipping,” Your loving devotion, O LORD, supports me. When anxiety overwhelms me, Your consolation delights my soul.", reference: "Psalm 94:18-19 BSB" },
+
+                { verse: "Come to me, all of you who are weary and carry heavy burdens, and I will give you rest.", reference: "Matthew 11:28 NLT" },
+
+                { verse: "Cast all your anxiety on Him, because He cares for you.", reference: "1 Peter 5:7 BSB" },
+				
+				{ verse: "You shall not be afraid of the terror by night, nor of the arrow that flies by day, nor of the pestilence that walks in darkness, nor of the destruction that lays waste at noonday.", reference: "Psalm 91:5–6 NKJV" },
+
+                { verse: "Therefore do not worry about tomorrow, for tomorrow will worry about itself.", reference: "Matthew 6:34 NKJV" },
+
+                { verse: "Don’t worry about anything; instead, pray about everything. Tell God what you need, and thank him for all he has done.", reference: "Philippians 4:6 NLT" },
+
+                { verse: "And the peace of God, which transcends all understanding, will guard your hearts and your minds in Christ Jesus.", reference: "Philippians 4:7 NIV" },
+
+                { verse: "I am leaving you with a gift—peace of mind and heart. And the peace I give is a gift the world cannot give. So don’t be troubled or afraid.", reference: "John 14:27 NLT" },
+				
+				{ verse: "Now the God of peace be with you all. Amen.", reference: "Romans 15:33 NKJV" },
+				
+				{ verse: "And the God of peace will crush Satan under your feet shortly. The grace of our Lord Jesus Christ be with you. Amen.", reference: "Romans 16:20 NKJV" },
+				
+				{ verse: "Do not fear, for those who are with us are more than those who are with them.", reference: "2 Kings 6:16 NKJV" },
+
+                { verse: "You, LORD, give perfect peace to those who keep their purpose firm and put their trust in you.", reference: "Isaiah 26:3 GNT" },
+
+                { verse: "The thief comes only to steal and kill and destroy. I have come that they may have life, and have it in all its fullness.", reference: "John 10:10 BSB" },
+				
+                { verse: "The righteous cry out, and the Lord hears them; he delivers them from all their troubles.", reference: "Psalm 34:17 NIV" },
+				
+				{ verse: "The Lord is close to the brokenhearted and saves those who are crushed in spirit.", reference: "Psalm 34:18 NIV" },
+			
+                { verse: "He shall cover you with His feathers, And under His wings you shall take refuge.", reference: "Psalm 91:4 NKJV" },
+				
+                { verse: "I am the good shepherd.", reference: "John 10:11 BSB" },
+
+                { verse: "He lets me rest in fields of green grass and leads me to quiet pools of fresh water.", reference: "Psalm 23:2 GNT" },
+			
+                { verse: "Be still, and know that I am God.", reference: "Psalm 46:10 NKJV" },
+
+                { verse: 'Then Jesus said, “Let’s go off by ourselves to a quiet place and rest awhile.”', reference: "Mark 6:31 NLT" },
+
+                { verse: "The LORD your God is in your midst... He will quiet you with His love, He will rejoice over you with singing.", reference: "Zephaniah 3:17 NKJV" },
+
+                { verse: "It is useless for you to work so hard from early morning until late at night, anxiously working for food to eat; for God gives rest to his loved ones.", reference: "Psalm 127:2 NLT" },
+				
+				{ verse: "...do not be worried about the food and drink you need in order to stay alive, or about clothes for your body. After all, isn't life worth more than food? And isn't the body worth more than clothes?", reference: "Matthew 6:25 GNT" },
+				
+				{ verse: "Look at the birds: they do not plant seeds, gather a harvest and put it in barns; yet your Father in heaven takes care of them! Aren't you worth much more than birds?", reference: "Matthew 6:26 GNT" },
+				
+				{ verse: "And the very hairs on your head are all numbered. So don’t be afraid; you are more valuable to God than a whole flock of sparrows.", reference: "Luke 12:7 NLT" },
+
+				{ verse: "For the LORD provides for those he loves, while they are asleep.", reference: "Psalm 127:2 GNT" },
+				
+                { verse: "When I lie down, I go to sleep in peace; you alone, O LORD, keep me perfectly safe.", reference: "Psalm 4:8 GNT" },
+				
+                { verse: "Peace, be still.", reference: "Mark 4:39 NKJV" },
+            ],
+			
+			wisdom: [
+			
+                { verse: "God has united you with Christ Jesus. For our benefit God made him to be wisdom itself.", reference: "1 Corinthians 1:30 NLT" },
+				
+                { verse: "In him lie hidden all the treasures of wisdom and knowledge.", reference: "Colossians 2:3 NLT" },
+				
+				{ verse: "And Jesus increased in wisdom and stature, and in favor with God and men.", reference: "Luke 2:52 NKJV" },
+				
+                { verse: "Come, see a Man who told me all things that I ever did. Could this be the Christ?", reference: "John 4:29 NKJV" },
+				
+                { verse: "...she came from the ends of the earth to hear the wisdom of Solomon, and now One greater than Solomon is here.", reference: "Matthew 12:42 BSB" },
+
+                { verse: "Therefore whoever hears these sayings of Mine, and does them, I will liken him to a wise man who built his house on the rock.", reference: "Matthew 7:24 NKJV" },
+				
+                { verse: "My son, give attention to my words... For they are life to those who find them, And health to all their flesh.", reference: "Proverbs 4:20-22 NKJV" },
+
+                { verse: "Call to me, and I will answer you; I will tell you wonderful and marvelous things that you know nothing about.", reference: "Jeremiah 33:3 GNT" },
+				
+                { verse: "O Father, Lord of heaven and earth, thank you for hiding these things from those who think themselves wise and clever, and for revealing them to the childlike.", reference: "Matthew 11:25 NLT" },
+				
+                { verse: "When Jesus finished saying these things, the crowd was amazed at the way he taught. He wasn't like the teachers of the Law; instead, he taught with authority.", reference: "Matthew 7:28-29 GNT" },
+				
+                { verse: "No man ever spoke like this Man!", reference: "John 7:46 NKJV" },
+
+                { verse: "He reveals deep and mysterious things and knows what lies hidden in darkness, though he is surrounded by light.", reference: "Daniel 2:22 NLT" },
+
+                { verse: "...I will give you such words and wisdom that none of your enemies will be able to refute or contradict what you say.", reference: "Luke 21:15 GNT" },
+				
+                { verse: "The Spirit of the LORD shall rest upon Him, The Spirit of wisdom and understanding, The Spirit of counsel and might, The Spirit of knowledge and of the fear of the LORD.", reference: "Isaiah 11:2 NKJV" },
+				
+                { verse: "Let him who is without sin among you be the first to throw a stone at her.", reference: "John 8:7 NKJV" },
+				
+                { verse: "Lord, to whom shall we go? You have the words of eternal life.", reference: "John 6:68 NKJV" },
+
+                { verse: "There is a way that appears to be right, but in the end it leads to death.", reference: "Proverbs 14:12 NIV" },
+
+                { verse: "Trust in the LORD with all your heart; do not depend on your own understanding. Seek his will in all you do, and he will show you which path to take.", reference: "Proverbs 3:5-6 NLT" },
+
+                { verse: "Wisdom is the principal thing; Therefore get wisdom. And in all your getting, get understanding.", reference: "Proverbs 4:7 NKJV" },
+
+                { verse: "...the wisdom from above is pure first of all; it is also peaceful, gentle, and friendly; it is full of compassion and produces a harvest of good deeds; it is free from prejudice and hypocrisy.", reference: "James 3:17 GNT" },
+
+                { verse: "How much better to get wisdom than gold, to get insight rather than silver!", reference: "Proverbs 16:16 NIV" },
+
+                { verse: "The LORD says, “I will guide you along the best pathway for your life. I will advise you and watch over you.”", reference: "Psalm 32:8 NLT" },
+				
+				{ verse: "Whether you turn to the right or to the left, your ears will hear a voice behind you, saying, “This is the way; walk in it.”", reference: "Isaiah 30:21 NIV" },
+				
+				 { verse: "In Your light we see light.", reference: "Psalm 36:9" },
+
+				{ verse: "He will not crush the weakest reed or put out a flickering candle. He will bring justice to all who have been wronged.", reference: "Isaiah 42:3 NLT" },
+				
+				{ verse: "...You hypocrites! You give to God one tenth even of the seasoning herbs, such as mint, dill, and cumin, but you neglect to obey the really important teachings of the Law, such as justice and mercy and honesty.", reference: "Matthew 23:23 GNT" },
+				
+				{ verse: "Jesus entered the temple courts and drove out all who were buying and selling there. He overturned the tables of the money changers and the benches of those selling doves.", reference: "Matthew 21:12 NLT" },
+				
+				{ verse: "Speak up for people who cannot speak for themselves. Protect the rights of all who are helpless.", reference: "Proverbs 31:8 GNT" },
+            ],
+			
+			grace: [
+                // ============================================================
+                // PHASE 1: THE DIAGNOSIS (Law vs. Grace)
+                // ============================================================
+                
+                { verse: "God saved you by his grace when you believed. And you can’t take credit for this; it is a gift from God.", reference: "Ephesians 2:8 NLT" },
+				
+				{ verse: "Salvation is not a reward for the good things we have done, so none of us can boast about it.", reference: "Ephesians 2:9 NLT" },
+
+                { verse: "When people work, their wages are not a gift, but something they have earned. But people are counted as righteous, not because of their work, but because of their faith in God who forgives sinners.", reference: "Romans 4:4-5 NLT" },
+			
+                { verse: "For the law was given through Moses, but grace and truth came through Jesus Christ.", reference: "John 1:17 NKJV" },
+
+                { verse: 'But those who depend on the law to make them right with God are under his curse, for the Scriptures say, “Cursed is everyone who does not observe and obey all the commands that are written in God’s Book of the Law.”', reference: "Galatians 3:10 NLT" },
+				
+                { verse: "...if you are trying to make yourselves right with God by keeping the law, you have been cut off from Christ! You have fallen away from God’s grace.", reference: "Galatians 5:4 NLT" },
+
+                { verse: "I do not treat the grace of God as meaningless. For if keeping the law could make us right with God, then there was no need for Christ to die.", reference: "Galatians 2:21 NLT" },
+				
+                // ============================================================
+                // PHASE 2: THE CURE (The Cross)
+                // ============================================================
+
+                { verse: 'But Christ has rescued us from the curse pronounced by the law. When he was hung on the cross, he took upon himself the curse for our wrongdoing. For it is written in the Scriptures, “Cursed is everyone who is hung on a tree.”', reference: "Galatians 3:13 NLT" },
+				
+				{ verse: "He has made us competent as ministers of a new covenant—not of the letter but of the Spirit; for the letter kills, but the Spirit gives life.", reference: "2 Corinthians 3:6 NIV" },
+				
+				{ verse: 'Brothers, listen! We are here to proclaim that through this man Jesus there is forgiveness for your sins. Everyone who believes in him is made right in God’s sight—something the law of Moses could never do.', reference: "Acts 13:38-39 NLT" },
+				
+				{ verse: 'Only Jesus has the power to save! His name is the only one in all the world that can save anyone.', reference: "Acts 4:12 CEV" },
+				
+				{ verse: "We implore you on behalf of Christ: Be reconciled to God. God made Him who knew no sin to be sin on our behalf, so that in Him we might become the righteousness of God.", reference: "2 Corinthians 5:20-21 BSB" },
+
+                // ============================================================
+                // PHASE 3: THE ALTAR CALL (Receiving)
+                // ============================================================
+ 
+                { verse: "...the “right time” is now. Today is the day of salvation.", reference: "2 Corinthians 6:2 NLT" },
+				
+				{ verse: "...if you confess with your mouth that Jesus is Lord and believe in your heart that God raised him from the dead, you will be saved.", reference: "Romans 10:9 ESV" },
+
+				{ verse: 'I am the way and the truth and the life. No one comes to the Father except through Me.', reference: "John 14:6 BSB" },
+				
+				{ verse: 'I tell you the truth, unless you are born again, you cannot see the Kingdom of God.', reference: "John 3:3 NLT" },
+				
+                { verse: "I stand at the door and knock. If you hear my voice and open the door, I will come in, and we will share a meal together as friends.", reference: "Revelation 3:20 NLT" },
+				
+				{ verse: "...God our Savior, who wants everyone to be saved and to understand the truth.", reference: "1 Timothy 2:3-4 NLT" },
+				
+				{ verse: "...it is not my heavenly Father’s will that even one of these little ones should perish.", reference: "Matthew 18:14 NLT" },
+				
+				{ verse: "He does not want anyone to be destroyed, but wants everyone to repent.", reference: "2 Peter 3:9 NLT" },
+
+                { verse: "...whoever comes to me I will never drive away.", reference: "John 6:37 NIV" },
+				
+				{ verse: "For the wages of sin is death, but the free gift of God is eternal life through Christ Jesus our Lord.", reference: "Romans 6:23 NLT" },
+				
+				{ verse: "...righteousness is given through faith in Jesus Christ to all who believe.", reference: "Romans 3:22 NIV" },
+				
+				{ verse: "Do I not have the right to do as I please with what is mine? Or are you envious because I am generous?", reference: "Matthew 20:15 BSB" },
+				
+                { verse: "But to all who believed him and accepted him, he gave the right to become children of God.", reference: "John 1:12 NLT" },
+				
+				{ verse: "They are reborn—not with a physical birth resulting from human passion or plan, but a birth that comes from God.", reference: "John 1:13 NLT" },
+				
+				{ verse: "Therefore, if anyone is in Christ, he is a new creation. The old has passed away; behold, the new has come.", reference: "2 Corinthians 5:17 ESV" },
+
+                // ============================================================
+                // PHASE 4: THE GUARANTEE (Instant & Permanent)
+                // ============================================================
+
+                { verse: "I tell you the truth, anyone who believes has eternal life.", reference: "John 6:47 NLT" },
+
+                { verse: "I tell you the truth, those who listen to my message and believe in God who sent me have eternal life. They will never be condemned for their sins, but they have already passed from death into life.", reference: "John 5:24 NLT" },
+					
+				{ verse: "...according to the law of Moses, nearly everything was purified with blood. For without the shedding of blood, there is no forgiveness.", reference: "Hebrews 9:22 NLT" },
+				
+                { verse: "For by one offering He has perfected forever those who are being sanctified.", reference: "Hebrews 10:14 NKJV" },
+				
+				{ verse: "But this Man, after He had offered one sacrifice for sins forever, sat down at the right hand of God.", reference: "Hebrews 10:12 NKJV" },
+
+                { verse: "Therefore, there is now no condemnation for those who are in Christ Jesus.", reference: "Romans 8:1 NIV" },
+
+                { verse: "...I give them eternal life, and they shall never perish; neither shall anyone snatch them out of My hand.", reference: "John 10:28 NKJV" },
+				
+				{ verse: "My Father, who has given them to Me, is greater than all; and no one is able to snatch them out of My Father’s hand.", reference: "John 10:29 NKJV" },
+
+                // ============================================================
+                // PHASE 5: THE INHERITANCE (Identity & Benefits)
+                // ============================================================
+				
+				{ verse: "But seek first the kingdom of God and His righteousness, and all these things will be added unto you.", reference: "Matthew 6:33 BSB" },
+				
+                { verse: "...those who receive abundance of grace and of the gift of righteousness will reign in life through the One, Jesus Christ.", reference: "Romans 5:17 NKJV" },
+				
+				{ verse: "...the glory of His grace, by which He made us accepted in the Beloved.", reference: "Ephesians 1:6 NKJV" },
+
+                { verse: "For You, O LORD, will bless the righteous; With favor You will surround him as with a shield.", reference: "Psalm 5:12 NKJV" },
+				
+				{ verse: "In righteousness you shall be established; You shall be far from oppression, for you shall not fear; And from terror, for it shall not come near you.", reference: "Isaiah 54:14 NKJV" },
+				
+				{ verse: "You shall laugh at destruction and famine, And you shall not be afraid of the beasts of the earth.", reference: "Job 5:22 NKJV" },
+
+                { verse: "The earnest prayer of a righteous person has great power and produces wonderful results.", reference: "James 5:16 NLT" },
+
+                { verse: "For you know the grace of our Lord Jesus Christ, that though he was rich, yet for your sake he became poor, so that you through his poverty might become rich.", reference: "2 Corinthians 8:9 NIV" },
+				
+				{ verse: "The blessing of the LORD makes one rich, And He adds no sorrow with it.", reference: "Proverbs 10:22 NKJV" },
+
+                { verse: "For the LORD God is our sun and our shield. He gives us grace and glory. The LORD will withhold no good thing from those who do what is right.", reference: "Psalm 84:11 NLT" },
+				
+				{ verse: "Blessings are on the head of the righteous...", reference: "Proverbs 10:6 NKJV" },
+				
+				// CONCLUSION
+
+                { verse: "For God so loved the world, that he gave his only Son, that whoever believes in him should not perish but have eternal life.", reference: "John 3:16 NIV" },
+				
+				{ verse: "None of them shall teach his neighbor, and none his brother, saying, ‘Know the LORD,’ for all shall know Me, from the least of them to the greatest of them.", reference: "Hebrews 8:11 NKJV" },
+				
+				{ verse: "For I will be merciful to their unrighteousness, and their sins and their lawless deeds I will remember no more.", reference: "Hebrews 8:12 NKJV" },
+
+                { verse: "It is finished.", reference: "John 19:30 NKJV" },
+            ],
+			
+			provision: [
+			
+				{ verse: "The LORD is my shepherd; I shall not lack.", reference: "Psalm 23:1" },
+			
+				{ verse: "I am the good shepherd.", reference: "John 10:11 NKJV" },
+
+                { verse: "Cross the Jordan River with me, live with me in Jerusalem, and I'll provide for you there.", reference: "2 Samuel 19:33 ISV" },
+
+                { verse: "Surely goodness and mercy will follow me all the days of my life, and I will dwell in the house of the LORD forever.", reference: "Psalm 23:6 BSB" },
+
+                { verse: "And my God will supply all your needs according to His glorious riches in Christ Jesus.", reference: "Philippians 4:19 BSB" },
+
+                { verse: "And God is able to make all grace abound toward you, that you, always having all sufficiency in all things, may have an abundance for every good work.", reference: "2 Corinthians 9:8 NKJV" },
+
+                { verse: "Even strong young lions sometimes go hungry, but those who trust in the LORD will lack no good thing.", reference: "Psalm 34:10 NLT" },
+
+                { verse: "For the LORD provides for those he loves, while they are asleep.", reference: "Psalm 127:2 GNT" },
+
+                { verse: "God made Him who knew no sin to be sin on our behalf, so that in Him we might become the righteousness of God.", reference: "2 Corinthians 5:21 BSB" },
+
+                { verse: "...righteousness is given through faith in Jesus Christ to all who believe.", reference: "Romans 3:22 NIV" },
+
+                { verse: "...those who receive abundance of grace and of the gift of righteousness will reign in life through the One, Jesus Christ.", reference: "Romans 5:17 NKJV" },
+
+                { verse: "For You, O LORD, will bless the righteous; With favor You will surround him as with a shield.", reference: "Psalm 5:12 NKJV" },
+
+                { verse: "Blessings crown the head of the righteous...", reference: "Proverbs 10:6 NIV" },
+
+                { verse: "The godly are showered with blessings...", reference: "Proverbs 10:6 NLT" },
+
+                { verse: "Blessed be the Lord, Who daily loads us with benefits, The God of our salvation!", reference: "Psalm 68:19 NKJV" },
+				
+				{ verse: 'For He says: “In the time of favor I heard you, and in the day of salvation I helped you.” Behold, now is the time of favor; now is the day of salvation!', reference: "2 Corinthians 6:2 BSB" },
+
+                { verse: "You will laugh at destruction and famine...", reference: "Job 5:22 NLT" },
+
+                { verse: "Wherever you go and whatever you do, you will be blessed.", reference: "Deuteronomy 28:6 NLT" },
+
+                { verse: "Beloved, I pray that you may prosper in all things and be in health, just as your soul prospers.", reference: "3 John 1:2 NKJV" },
+
+                { verse: "The blessing of the LORD makes one rich, And He adds no sorrow with it.", reference: "Proverbs 10:22 NKJV" },
+
+                { verse: "By humility and the fear of the LORD Are riches and honor and life.", reference: "Proverbs 22:4 NKJV" },
+
+                { verse: "And you shall remember the LORD your God, for it is He who gives you power to get wealth...", reference: "Deuteronomy 8:18 NKJV" },
+
+                { verse: "Cursed is the man who trusts in mankind, who makes mere flesh his strength and turns his heart from the LORD. He will be like a shrub in the desert; he will not see when prosperity comes.", reference: "Jeremiah 17:5-6 BSB" },
+
+                { verse: "Command those who are rich in this present age not to be haughty, nor to trust in uncertain riches but in the living God, who gives us richly all things to enjoy.", reference: "1 Timothy 6:17 NKJV" },
+
+                { verse: "Length of days is in her right hand, In her left hand riches and honor. Her ways are ways of pleasantness, And all her paths are peace.", reference: "Proverbs 3:16-17 NKJV" },
+
+                { verse: "This Book of the Law shall not depart from your mouth, but you shall meditate in it day and night, that you may observe to do according to all that is written in it. For then you will make your way prosperous, and then you will have good success.", reference: "Joshua 1:8 NKJV" },
+
+                { verse: "But his delight is in the law of the LORD, And in His law he meditates day and night. He shall be like a tree Planted by the rivers of water, That brings forth its fruit in its season, Whose leaf also shall not wither; And whatever he does shall prosper.", reference: "Psalm 1:2-3 NKJV" },
+
+                { verse: "A good man leaves an inheritance to his children's children, But the wealth of the sinner is stored up for the righteous.", reference: "Proverbs 13:22 NKJV" },
+
+                { verse: "For God gives wisdom and knowledge and joy to a man who is good in His sight; but to the sinner He gives the work of gathering and collecting, that he may give to him who is good before God.", reference: "Ecclesiastes 2:26 NKJV" },
+
+                { verse: "For the LORD God is our sun and our shield. He gives us grace and glory. The LORD will withhold no good thing from those who do what is right.", reference: "Psalm 84:11 NLT" },
+
+                { verse: "For you know the grace of our Lord Jesus Christ, that though He was rich, yet for your sakes He became poor, that you through His poverty might become rich.", reference: "2 Corinthians 8:9 NKJV" },
+
+                { verse: "The threshing floors will be full of grain, and the vats will overflow with new wine and oil.", reference: "Joel 2:24 BSB" },
+
+                { verse: "Since he did not spare even his own Son but gave him up for us all, won't he also give us everything else?", reference: "Romans 8:32 NLT" },
+
+                { verse: "So if you who are evil know how to give good gifts to your children, how much more will your Father in heaven give good things to those who ask Him!", reference: "Matthew 7:11 BSB" },
+
+                { verse: "Ask, and you will receive; seek, and you will find; knock, and the door will be opened to you.", reference: "Matthew 7:7 GNT" },
+
+                { verse: "And the very hairs on your head are all numbered. So don't be afraid; you are more valuable to God than a whole flock of sparrows.", reference: "Luke 12:7 NLT" },
+				
+				{ verse: "Let us therefore come boldly to the throne of grace, that we may obtain mercy and find grace to help in time of need.", reference: "Hebrews 4:16 NKJV" },
+
+                { verse: "...Do not be afraid. Stand still, and see the salvation of the LORD...", reference: "Exodus 14:13 NKJV" },
+				
+				{ verse: "The race is not to the swift, nor the battle to the strong, nor bread to the wise, nor riches to men of understanding, nor favor to men of skill; but time and chance happen to them all.", reference: "Ecclesiastes 9:11 NKJV" },
+
+                { verse: "Just then Boaz arrived from Bethlehem...", reference: "Ruth 2:4 NIV" },
+
+                { verse: "Restore all that was hers, and all the proceeds of the field from the day that she left the land until now.", reference: "2 Kings 8:6 NKJV" },
+
+                { verse: "And now that you belong to Christ, you are the true children of Abraham. You are his heirs, and God's promise to Abraham belongs to you.", reference: "Galatians 3:29 NLT" },
+
+                { verse: "I will bless you and make your name famous, so that you will be a blessing.", reference: "Genesis 12:2 GNT" },
+
+                { verse: "Through Christ Jesus, God has blessed the Gentiles with the same blessing he promised to Abraham...", reference: "Galatians 3:14 NLT" },
+
+                { verse: "After these things the word of the LORD came to Abram in a vision, saying, \"Do not be afraid, Abram. I am your shield, your exceedingly great reward.\"", reference: "Genesis 15:1 NKJV" },
+
+                { verse: "I will surely bless you, and I will multiply your descendants like the stars in the sky and the sand on the seashore. Your descendants will possess the gates of their enemies.", reference: "Genesis 22:17 BSB" },
+
+                { verse: "And the LORD will make you the head and not the tail; you shall be above only, and not be beneath...", reference: "Deuteronomy 28:13 NKJV" },
+
+                { verse: "...to give you large and beautiful cities which you did not build, houses full of all good things, which you did not fill, hewn-out wells which you did not dig, vineyards and olive trees which you did not plant...", reference: "Deuteronomy 6:10-11 NKJV" },
+
+                { verse: "Then Isaac sowed in that land, and reaped in the same year a hundredfold; and the LORD blessed him.", reference: "Genesis 26:12 NKJV" },
+
+                { verse: "The man began to prosper, and continued prospering until he became very prosperous...", reference: "Genesis 26 13-14 NKJV" },
+
+                { verse: "The LORD was with Joseph, and he was a successful man...", reference: "Genesis 39:2 NKJV" },
+
+                { verse: "And his master saw that the LORD was with him and that the LORD made all he did to prosper in his hand.", reference: "Genesis 39:3 NKJV" },
+
+                { verse: "Bring the whole tithe into the storehouse, that there may be food in my house. Test me in this,\" says the LORD Almighty, \"and see if I will not throw open the floodgates of heaven and pour out so much blessing that there will not be room enough to store it.", reference: "Malachi 3:10 NIV" },
+
+                { verse: "Honor the LORD with your wealth and with the firstfruits of all your crops; then your barns will be filled with plenty, and your vats will overflow with new wine.", reference: "Proverbs 3:9-10 BSB" },
+
+                { verse: "If you extend your soul to the hungry And satisfy the afflicted soul, Then your light shall dawn in the darkness, And your darkness shall be as the noonday.", reference: "Isaiah 58:10 NKJV" },
+
+                { verse: "A generous man will be blessed, for he shares his bread with the poor.", reference: "Proverbs 22:9 BSB" },
+
+                { verse: "His family will be wealthy and rich, and he will be prosperous forever.", reference: "Psalm 112:3 GNT" },
+
+                { verse: "He gives generously to the needy, and his kindness never fails; he will be powerful and respected.", reference: "Psalm 112:9 GNT" },
+
+                { verse: "A generous soul will prosper, and he who refreshes others will himself be refreshed.", reference: "Proverbs 11:25 BSB" },
+				
+                { verse: "Do not store up riches for yourselves here on earth, where moths and rust destroy, and robbers break in and steal.", reference: "Matthew 6:19 GNT" },
+				
+				{ verse: "Instead, store up riches for yourselves in heaven, where moths and rust cannot destroy, and robbers cannot break in and steal.", reference: "Matthew 6:20 GNT" },
+
+                { verse: "...give to the poor, and you will have treasure in heaven.", reference: "Matthew 19:21 BSB" },
+
+                { verse: "When you give to the poor, it is like lending to the LORD, and the LORD will pay you back.", reference: "Proverbs 19:17 GNT" },
+
+                { verse: "But when you host a banquet, invite the poor, the crippled, the lame, and the blind, and you will be blessed. Since they cannot repay you, you will be repaid at the resurrection of the righteous.", reference: "Luke 14:13 BSB" },
+
+                { verse: "Give, and it will be given to you. A good measure, pressed down, shaken together, and running over will be poured into your lap. For with the measure you use, it will be measured back to you.", reference: "Luke 6:38 BSB" },
+
+                { verse: "...Whoever sows sparingly will also reap sparingly, and whoever sows generously will also reap generously.", reference: "2 Corinthians 9:6 BSB" },
+
+                { verse: "For God loves a cheerful giver.", reference: "2 Corinthians 9:7 BSB" },
+
+                { verse: "Behold, I am coming soon, and My reward is with Me, to give to each one according to what he has done.", reference: "Revelation 22:12 BSB" },
+
+                { verse: "Watch out! Don't do your good deeds publicly, to be admired by others, for you will lose the reward from your Father in heaven.", reference: "Matthew 6:1 NLT" },
+
+                { verse: "But when you give to the needy, do not let your left hand know what your right hand is doing, so that your giving may be in secret. And your Father, who sees what is done in secret, will reward you.", reference: "Matthew 6:3 BSB" },
+
+            ],
+        };
+
+        const feedContainer = document.getElementById('feed-container');
+        const categoryTrigger = document.getElementById('category-trigger');
+        const categoryOverlay = document.getElementById('category-overlay');
+        const currentCategoryLabel = document.getElementById('current-category-label');
+        const closeOverlayBtn = document.querySelector('.close-overlay');
+        const options = document.querySelectorAll('.overlay-option');
+        const menuOptionsContainer = document.getElementById('menu-options-container');
+
+        let currentCategory = 'grace';
+		let isLoading = false;
+        let hasUserScrolled = false; 
+        
+        // --- Intersection Observer (Animation on Scroll) ---
+        const observerOptions = {
+            root: feedContainer,
+            threshold: 0.5 
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                } else {
+                    entry.target.classList.remove('active'); 
+                }
+            });
+        }, observerOptions);
+
+        // --- Core Logic: Append Verses ---
+        function appendVerses(category, isFirstLoad = false) {
+            const data = scriptures[category];
+            
+            data.forEach((item, index) => {
+                const screen = document.createElement('div');
+                screen.className = 'verse-screen';
+                
+                screen.setAttribute('role', 'article');
+                screen.setAttribute('aria-label', `Scripture: ${item.reference}`);
+                
+                const hintHtml = (isFirstLoad && index === 0 && !hasUserScrolled) 
+                    ? '<div class="scroll-hint" aria-hidden="true">Swipe Up</div>' 
+                    : '';
+
+                screen.innerHTML = `
+                    <div class="content-wrapper">
+                        <div class="cross-icon" aria-hidden="true">†</div>
+                        <p class="verse-text">${item.verse}</p>
+                        <div class="verse-reference">${item.reference}</div>
+                        ${hintHtml}
+                    </div>
+                `;
+                
+                feedContainer.appendChild(screen);
+                observer.observe(screen); 
+            });
+        }
+
+        function renderFeed(category) {
+            feedContainer.innerHTML = '';
+            feedContainer.scrollTop = 0;
+            appendVerses(category, true);
+            appendVerses(category, false);
+        }
+
+        feedContainer.addEventListener('scroll', () => {
+		    // Infinite scroll logic
+		    if (feedContainer.scrollTop + feedContainer.clientHeight >= feedContainer.scrollHeight - 100) {
+		        if (!isLoading) {
+		            isLoading = true;
+		            appendVerses(currentCategory);
+		            
+		            setTimeout(() => {
+		                isLoading = false;
+		            }, 100); 
+		        }
+		    }
+		});
+
+        // --- ACCESSIBILITY LOGIC ---
+        
+        function handleEnterSpace(e, callback) {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                callback();
+            }
+        }
+
+        function openMenu() {
+            categoryOverlay.classList.add('open');
+            categoryTrigger.setAttribute('aria-expanded', 'true');
+            
+            setTimeout(() => {
+                const activeOpt = document.querySelector('.overlay-option.active');
+                if (activeOpt) {
+                    activeOpt.focus();
+                } else if (options.length > 0) {
+                    options[0].focus();
+                } else {
+                    closeOverlayBtn.focus();
+                }
+            }, 305);
+        }
+
+        function closeMenu() {
+            categoryOverlay.classList.remove('open');
+            categoryTrigger.setAttribute('aria-expanded', 'false');
+            categoryTrigger.focus();
+        }
+
+        function handleMenuNavigation(e) {
+            const isArrowUp = e.key === "ArrowUp";
+            const isArrowDown = e.key === "ArrowDown";
+            if (!isArrowUp && !isArrowDown) return;
+            e.preventDefault();
+            const activeElement = document.activeElement;
+            const optionsArray = Array.from(options);
+            const currentIndex = optionsArray.indexOf(activeElement);
+            if (currentIndex !== -1) {
+                let nextIndex;
+                if (isArrowDown) {
+                    nextIndex = (currentIndex + 1) % optionsArray.length;
+                } else {
+                    nextIndex = (currentIndex - 1 + optionsArray.length) % optionsArray.length;
+                }
+                optionsArray[nextIndex].focus();
+            } else {
+                options[0].focus();
+            }
+        }
+
+        // --- Event Listeners ---
+        
+        categoryTrigger.addEventListener('click', openMenu);
+        categoryTrigger.addEventListener('keydown', (e) => handleEnterSpace(e, openMenu));
+
+        closeOverlayBtn.addEventListener('click', closeMenu);
+        
+        document.addEventListener('keydown', (event) => {
+            if (event.key === "Escape" && categoryOverlay.classList.contains('open')) {
+                closeMenu();
+            }
+        });
+
+        options.forEach(option => {
+            const selectOption = () => {
+                currentCategory = option.getAttribute('data-value');
+                currentCategoryLabel.textContent = option.textContent;
+                options.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+                categoryTrigger.setAttribute('aria-label', `Current Topic: ${option.textContent}. Change Topic.`);
+                renderFeed(currentCategory);
+                closeMenu();
+            };
+            option.addEventListener('click', selectOption);
+            option.addEventListener('keydown', (e) => handleEnterSpace(e, selectOption));
+            option.addEventListener('keydown', handleMenuNavigation);
+        });
+
+        // --- HIDE HINT ON FIRST SCROLL ---
+        const handleFirstScroll = () => {
+            if (hasUserScrolled) return; // Prevent this from running more than needed
+            const hint = document.querySelector('.scroll-hint');
+            if (hint) {
+                hint.style.opacity = '0';
+            }
+            hasUserScrolled = true;
+        };
+        
+        feedContainer.addEventListener('scroll', handleFirstScroll);
+        
+        // --- DARK MODE TOGGLE ---
+        const darkToggle = document.getElementById('dark-toggle');
+        const root = document.documentElement;
+
+        // Respect system preference on first load
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const savedTheme = localStorage.getItem('faithscrolling-theme');
+
+        function applyTheme(dark) {
+            root.classList.toggle('dark', dark);
+            darkToggle.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+        }
+
+        applyTheme(savedTheme === 'dark' || (!savedTheme && prefersDark));
+
+        darkToggle.addEventListener('click', () => {
+            const isDark = !root.classList.contains('dark');
+            applyTheme(isDark);
+            localStorage.setItem('faithscrolling-theme', isDark ? 'dark' : 'light');
+        });
+
+        darkToggle.addEventListener('keydown', (e) => handleEnterSpace(e, () => darkToggle.click()));
+
+        // --- INITIALIZATION ---
+        renderFeed(currentCategory);
+
+    </script>
+	
+</body>
+</html>
