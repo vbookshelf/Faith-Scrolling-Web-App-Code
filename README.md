@@ -52,6 +52,12 @@ This is how to use the python server on a Mac:
 
 ## Revision History
 
+Version 2.0<br>
+7-July-2026<br>
+- Fixed bugs
+- Optimized page loading
+- Added more video content.
+
 Version 1.0<br>
 6-July-2026<br>
 First release.
