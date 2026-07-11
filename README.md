@@ -32,7 +32,7 @@ https://faithscrolling.com/shorts.html
 
 Instead of doomscrolling through stressful social media feeds, faithscrolling.com offers a healthy spiritual alternative. It uses the same vertical swipe mechanics as TikTok to give the user curated text and video content. The same scrolling habit and muscle memory is used for something positive. There are no ads, no signup and no tracking or other dark monetization patterns.
 
-## Why I'm releasing the code
+## Curated vertical scrolling
 
 When I saw how smooth and fast the video playback worked I realized that there's an opportunity to disconnect the physical act of scrolling from the toxic social media algorithms. In other words, users can satisfy the habit without the harm.
 
