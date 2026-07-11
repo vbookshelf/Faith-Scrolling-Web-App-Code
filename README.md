@@ -7,8 +7,13 @@ https://faithscrolling.com/shorts.html
 
 <br>
 
+<img src="images/image2.png" alt="App screenshot" height="500">
+<p>Bible verses in six categories</p>
+
+<br>
+
 <img src="images/image1.png" alt="App screenshot" height="500">
-<p>Minimalist UI</p>
+<p>Vertical scroll video feed</p>
 
 ## What does the app do?
 
