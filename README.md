@@ -7,18 +7,24 @@ https://faithscrolling.com/shorts.html
 
 <br>
 
-<img src="images/image2.png" alt="App screenshot" height="500">
+<img src="images/image2.png" alt="App verse screenshot" height="500">
 <p>Bible verses in six categories</p>
 
 <br>
 
-<img src="images/image1.png" alt="App screenshot" height="500">
+<img src="images/image1.png" alt="App video screenshot" height="500">
 <p>Vertical scroll video feed</p>
 
 <br>
 
-<img src="images/image4.png" alt="App screenshot" height="500">
+<img src="images/image4.png" alt="App video menu screenshot" height="500">
 <p>YouTube Shorts menu</p>
+
+<br>
+
+<img src="images/image3.png" alt="QR Code" height="300">
+<p>QR Code - faithscrolling.com</p>
+
 
 <br>
 
