@@ -15,6 +15,13 @@ https://faithscrolling.com/shorts.html
 <img src="images/image1.png" alt="App screenshot" height="500">
 <p>Vertical scroll video feed</p>
 
+<br>
+
+<img src="images/image4.png" alt="App screenshot" height="500">
+<p>YouTube Shorts menu</p>
+
+<br>
+
 ## What does the app do?
 
 Instead of doomscrolling through stressful social media feeds, faithscrolling.com offers a healthy spiritual alternative. It uses the same vertical swipe mechanics as TikTok to give the user curated text and video content. The same scrolling habit and muscle memory is used for something positive. There are no ads, no signup and no tracking or other dark monetization patterns.
