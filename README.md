@@ -38,9 +38,12 @@ When I saw how smooth and fast the video playback worked I realized that there's
 
 This can be done by transitioning to curated scroll content. One way could be to give people the ability to create personalized short-video playlists, which they can then scroll through using browser-based video players. Creators already publish newsletters, which they share via email - in future, creators could also share curated short video playlists.
 
-For example, a creator could curate a list of URLs of YouTube shorts. This list could be shared as a .txt file. To scroll the videos their subscribers would upload the .txt file to a local or online browser based video player. 
+For example, a creator could curate a list of URLs of YouTube shorts. This list could be shared as a .txt file. To scroll the videos their subscribers would upload the .txt file to a local or online browser based video player. There's no need to self host videos on your own backend server infrastructure. This is how the Faith Scrolling video player works, except that the video URLs are hard coded.
 
-There's no need to self host videos on your own backend server infrastructure. This is how the Faith Scrolling video player works, except that the video URLs are hard coded.
+This is a working example of a browser-based YouTube Shorts player that takes a txt file as input:<br>
+https://github.com/vbookshelf/YouTube-Shorts-Player
+
+<br>
 
 ## How to run the app
 
@@ -67,6 +70,13 @@ This is how to use the python server on a Mac:
 - The main weakness of this concept is that it relies on a third party platform (YouTube) where videos are created and hosted. The risk is that, at any time, the platform could change it's terms of service regarding embedding YouTube Shorts. That change could impact all web apps that use iframes to display YouTube short videos. Those changes could be negative, but they could also be positive if, for example, YouTube gave video creators finer grained control over how web apps embed their content.
 - When scrolling backwards, beyond video n-1, the audio is automatically disabled to prevent lagging. When the user re-engages the audio, playback continues smoothly. However, playback still lags when the user tries to re-enable audio when on the n-2 video. The other past videos (n-3, n-4, etc.) work without lagging.
 
+
+<br>
+
+## References
+
+- YouTube Shorts Player<br>
+https://github.com/vbookshelf/YouTube-Shorts-Player
 
 <br>
 
